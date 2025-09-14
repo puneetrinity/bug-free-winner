@@ -2,13 +2,13 @@ providers = ["node"]
 
 [phases.setup]
 aptPkgs = [
-    "chromium",
+    "chromium-browser",
     "libnss3",
     "libatk1.0-0", 
     "libatk-bridge2.0-0",
     "libcups2",
     "libgbm1",
-    "libasound2t64",
+    "libasound2",
     "libpangocairo-1.0-0",
     "libxss1",
     "libgtk-3-0",
@@ -22,4 +22,4 @@ cmds = ["npm ci --prefer-offline --no-audit --no-fund"]
 [variables]
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
 PUPPETEER_SKIP_DOWNLOAD = "true"
-PUPPETEER_EXECUTABLE_PATH = "/usr/bin/chromium"
+PUPPETEER_EXECUTABLE_PATH = "/usr/bin/chromium-browser"
