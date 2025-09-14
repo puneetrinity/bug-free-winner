@@ -362,7 +362,7 @@ export class PDFGenerator {
                         <p class="source-url">${source.url}</p>
                         <div class="source-meta">
                             <span>Published: ${source.published_at?.toISOString().split('T')[0] || 'Unknown'}</span> |
-                            <span>Source: ${source.source}</span> |
+                            <span>Domain: ${this.extractDomainFromUrl(source.url)}</span> |
                             <span>Quality Score: ${Number(source.composite_score).toFixed(2)}</span>
                         </div>
                         ${source.snippet ? `<p class="source-snippet">${source.snippet}</p>` : ''}
@@ -371,6 +371,15 @@ export class PDFGenerator {
             `).join('')}
         </div>
     </div>`;
+  }
+
+  private extractDomainFromUrl(url: string): string {
+    try {
+      const domain = new URL(url).hostname;
+      return domain.startsWith('www.') ? domain.substring(4) : domain;
+    } catch {
+      return 'Unknown Domain';
+    }
   }
 
   private generateAppendix(report: Report, sources: ContentItem[], citations: CitationData[]): string {
@@ -605,12 +614,21 @@ export class PDFGenerator {
             margin-top: 30px;
         }
         
+        .sources-section h2 {
+            color: #2c5aa0;
+            border-bottom: 2px solid #2c5aa0;
+            padding-bottom: 10px;
+            margin-bottom: 25px;
+        }
+        
         .source-item {
             display: flex;
             margin-bottom: 20px;
             padding: 15px;
             background: #f8f9fa;
             border-radius: 5px;
+            page-break-inside: avoid;
+            border-left: 3px solid #2c5aa0;
         }
         
         .source-number {
@@ -623,12 +641,16 @@ export class PDFGenerator {
         .source-details h4 {
             margin-bottom: 8px;
             color: #333;
+            font-size: 12pt;
+            font-weight: 600;
         }
         
         .source-url {
             color: #007bff;
             word-break: break-all;
             margin-bottom: 8px;
+            font-size: 9pt;
+            font-family: monospace;
         }
         
         .source-meta {

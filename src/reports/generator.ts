@@ -184,6 +184,20 @@ export class ReportGenerator {
     sources = sources.filter(source => 
       new Date(source.published_at || source.collected_at) > cutoffDate
     );
+    
+    // Filter out generic government/regulatory content unless specifically relevant to the topic
+    if (!topic.toLowerCase().includes('epfo') && !topic.toLowerCase().includes('regulation')) {
+      sources = sources.filter(source => {
+        const contentText = (source.title + ' ' + (source.snippet || '')).toLowerCase();
+        // Only exclude if it's primarily about EPFO/ESI without HR relevance
+        const isGenericGovContent = contentText.includes('epfo') && 
+          !contentText.includes('hr') && 
+          !contentText.includes('employee') && 
+          !contentText.includes('attrition') &&
+          !contentText.includes('recruitment');
+        return !isGenericGovContent;
+      });
+    }
 
     // Prioritize high-quality sources
     sources = sources

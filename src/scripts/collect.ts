@@ -133,7 +133,7 @@ class ContentCollector {
     try {
       // Comprehensive HR search queries
       const searchQueries = [
-        'EPFO latest updates India 2024',
+        'workplace policy updates India 2024',
         'Indian labour laws changes',
         'employee attrition trends India',
         'HR technology trends India',
