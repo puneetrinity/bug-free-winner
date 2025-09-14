@@ -98,13 +98,22 @@ export class BraveScrapingBeeCollector {
             return false;
           }
           
-          // Prefer HR-related domains and content
-          const hrKeywords = ['hr', 'human resource', 'employment', 'recruitment', 'talent', 'workforce', 'employee'];
+          // Include HR-related content and Indian employment/government content
+          const hrKeywords = [
+            'hr', 'human resource', 'employment', 'recruitment', 'talent', 'workforce', 'employee',
+            'epfo', 'pf', 'provident fund', 'esi', 'esic', 'labour', 'labor', 'ministry',
+            'government', 'policy', 'compliance', 'payroll', 'salary', 'wage', 'benefit'
+          ];
           const hasHRContent = hrKeywords.some(keyword => 
             url.includes(keyword) || title.includes(keyword) || desc.includes(keyword)
           );
           
-          return hasHRContent;
+          // Also include trusted Indian domains
+          const trustedDomains = ['pib.gov.in', 'epfindia.gov.in', 'esic.gov.in', 'labour.gov.in', 
+                                'peoplematters.in', 'hrkatha.com', 'economictimes.indiatimes.com'];
+          const isTrustedDomain = trustedDomains.some(domain => url.includes(domain));
+          
+          return hasHRContent || isTrustedDomain;
         });
       }
 
