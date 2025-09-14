@@ -360,6 +360,39 @@ app.use((error: Error, req: express.Request, res: express.Response, next: expres
   });
 });
 
+// Database migration endpoint (protected by simple auth)
+app.post('/api/admin/migrate', async (req, res) => {
+  try {
+    // Simple auth check - in production, use proper auth
+    const authHeader = req.headers.authorization;
+    if (authHeader !== 'Bearer migrate-db-2024') {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Unauthorized' 
+      });
+    }
+
+    console.log('🗄️ Running database migration...');
+    
+    // Import migration script
+    const { DatabaseMigrator } = await import('./scripts/migrate');
+    const migrator = new DatabaseMigrator();
+    
+    await migrator.migrate();
+    
+    res.json({ 
+      success: true, 
+      message: 'Database migration completed successfully' 
+    });
+  } catch (error: any) {
+    console.error('Migration failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ 
