@@ -1,12 +1,9 @@
 #!/usr/bin/env node
 
-import { PIBScraper } from '../scrapers/pib-scraper';
-import { RSSParser } from '../scrapers/rss-parser';
 import { ContentScorer } from '../scoring/content-scorer';
-import { BraveScrapingBeeCollector, HR_SEARCH_QUERIES } from '../collectors/brave-scrapingbee-collector';
+import { BraveScrapingBeeCollector } from '../collectors/brave-scrapingbee-collector';
 import db from '../db/connection';
 import { RawContentItem } from '../types';
-import { RSS_SOURCES, getTier1Sources, RSSSource } from '../config/rss-sources';
 
 interface CollectionResult {
   source: string;
@@ -18,8 +15,6 @@ interface CollectionResult {
 }
 
 class ContentCollector {
-  private pibScraper: PIBScraper;
-  private rssParser: RSSParser;
   private scorer: ContentScorer;
   private braveCollector: BraveScrapingBeeCollector | null = null;
 
@@ -27,9 +22,6 @@ class ContentCollector {
     const scrapingBeeKey = process.env.SCRAPINGBEE_API_KEY;
     const braveKey = process.env.BRAVE_API_KEY;
     
-    // Initialize PIB scraper with ScrapingBee if available
-    this.pibScraper = new PIBScraper(scrapingBeeKey);
-    this.rssParser = new RSSParser();
     this.scorer = new ContentScorer();
     
     // Initialize Brave + ScrapingBee collector if both APIs available
@@ -37,26 +29,16 @@ class ContentCollector {
       this.braveCollector = new BraveScrapingBeeCollector(braveKey, scrapingBeeKey);
       console.log('🐝🔍 Brave Search + ScrapingBee collector initialized');
     } else {
-      console.log('⚠️ Brave Search or ScrapingBee API key missing - web search collection disabled');
+      console.log('⚠️ Brave Search or ScrapingBee API key missing - collection disabled');
+      throw new Error('Required API keys missing');
     }
   }
 
   async collectAll(): Promise<CollectionResult[]> {
-    console.log('🚀 Starting comprehensive content collection...\n');
+    console.log('🚀 Starting content collection with Brave Search + ScrapingBee...\n');
     const results: CollectionResult[] = [];
 
-    // Collect from PIB Labour Ministry
-    results.push(await this.collectFromPIB());
-    
-    // Collect from Tier 1 RSS feeds (verified working)
-    const tier1Sources = getTier1Sources();
-    console.log(`📡 Found ${tier1Sources.length} Tier 1 RSS sources to process\n`);
-    
-    for (const source of tier1Sources) {
-      results.push(await this.collectFromRSSSource(source));
-    }
-    
-    // Collect from Brave Search + ScrapingBee (if available)
+    // Collect from Brave Search + ScrapingBee
     if (this.braveCollector) {
       results.push(await this.collectFromBraveSearch());
     }
@@ -97,67 +79,6 @@ class ContentCollector {
     return results;
   }
 
-  private async collectFromPIB(): Promise<CollectionResult> {
-    const startTime = Date.now();
-    console.log('🏛️  Collecting from PIB Labour Ministry...');
-    
-    let rawItems: RawContentItem[] = [];
-    let errors = 0;
-    
-    try {
-      rawItems = await this.pibScraper.scrape();
-    } catch (error) {
-      console.error('❌ PIB scraping failed:', error);
-      errors++;
-    }
-
-    const { processed, avgScore } = await this.processAndStore(rawItems, 'pib');
-    const duration = Date.now() - startTime;
-
-    return {
-      source: 'PIB',
-      collected: rawItems.length,
-      processed,
-      errors,
-      avgScore,
-      duration
-    };
-  }
-
-  private async collectFromRSSSource(rssSource: RSSSource): Promise<CollectionResult> {
-    const startTime = Date.now();
-    console.log(`📡 Collecting from ${rssSource.name}...`);
-    
-    let rawItems: RawContentItem[] = [];
-    let errors = 0;
-
-    try {
-      const items = await this.rssParser.parseRSSFeed(rssSource.url, rssSource.name.toLowerCase().replace(/\s+/g, '_'));
-      if (items.length > 0) {
-        rawItems = items;
-        console.log(`✅ Successfully got ${items.length} items from ${rssSource.name}`);
-      } else {
-        console.log(`ℹ️  No items found in ${rssSource.name} feed`);
-      }
-    } catch (error) {
-      console.warn(`⚠️  Failed to parse ${rssSource.name}:`, error.message);
-      errors++;
-    }
-
-    // Use source name as the database source identifier
-    const sourceId = rssSource.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-    const { processed, avgScore } = await this.processAndStore(rawItems, sourceId);
-    const duration = Date.now() - startTime;
-
-    return {
-      source: rssSource.name,
-      collected: rawItems.length,
-      processed,
-      errors,
-      avgScore,
-      duration
-    };
-  }
 
   private async processAndStore(rawItems: RawContentItem[], source: string): Promise<{processed: number, avgScore: number}> {
     if (rawItems.length === 0) {
@@ -210,11 +131,21 @@ class ContentCollector {
     }
 
     try {
-      // Use a subset of queries to avoid hitting API limits
-      const selectedQueries = HR_SEARCH_QUERIES.slice(0, 5); // First 5 queries
-      console.log(`🎯 Running ${selectedQueries.length} search queries...`);
+      // Comprehensive HR search queries
+      const searchQueries = [
+        'EPFO latest updates India 2024',
+        'Indian labour laws changes',
+        'employee attrition trends India',
+        'HR technology trends India',
+        'remote work policies Indian companies',
+        'employee retention strategies India',
+        'workplace culture India',
+        'recruitment trends India 2024'
+      ];
       
-      rawItems = await this.braveCollector.collectHRContent(selectedQueries, 3); // 3 results per query
+      console.log(`🎯 Running ${searchQueries.length} search queries...`);
+      
+      rawItems = await this.braveCollector.collectHRContent(searchQueries, 4); // 4 results per query
       console.log(`✅ Brave Search collected ${rawItems.length} articles`);
       
     } catch (error: any) {

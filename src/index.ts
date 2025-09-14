@@ -413,8 +413,6 @@ app.post('/api/admin/collect', async (req, res) => {
     }
 
     // Import and run collection
-    const { PIBScraper } = await import('./scrapers/pib-scraper');
-    const { RSSParser } = await import('./scrapers/rss-parser'); 
     const { ContentScorer } = await import('./scoring/content-scorer');
     const { BraveScrapingBeeCollector } = await import('./collectors/brave-scrapingbee-collector');
     
