@@ -1,4 +1,4 @@
-import { RawContentItem, ScoringComponents } from '../types';
+import { RawContentItem, ScoringComponents, ContentItem } from '../types';
 import crypto from 'crypto';
 
 export class ContentScorer {
@@ -16,7 +16,7 @@ export class ContentScorer {
   ];
 
   scoreContent(item: RawContentItem, source: string): {
-    scored_item: Record<string, unknown>,
+    scored_item: Omit<ContentItem, 'id' | 'collected_at'>,
     components: ScoringComponents
   } {
     const domain = this.extractDomain(item.url);
@@ -206,7 +206,7 @@ export class ContentScorer {
   }
 
   // Utility method to batch score multiple items
-  scoreMultipleItems(items: RawContentItem[], source: string): Record<string, unknown>[] {
+  scoreMultipleItems(items: RawContentItem[], source: string): Omit<ContentItem, 'id' | 'collected_at'>[] {
     console.log(`🔢 Scoring ${items.length} items from ${source}...`);
     
     const scoredItems = items.map(item => {

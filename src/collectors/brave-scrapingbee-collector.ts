@@ -39,7 +39,7 @@ export class BraveScrapingBeeCollector {
         
         // If no results with site restriction, try without it
         if (searchResults.length === 0) {
-          console.log(`🔄 No results with site restriction, trying broader search...`);
+          console.log('🔄 No results with site restriction, trying broader search...');
           searchResults = await this.braveSearchBroad(query, maxResultsPerQuery);
         }
         
@@ -82,7 +82,7 @@ export class BraveScrapingBeeCollector {
         textFormat: 'raw'
       };
 
-      console.log(`🔍 Brave Search Request:`);
+      console.log('🔍 Brave Search Request:');
       console.log(`   URL: ${this.braveBaseUrl}`);
       console.log(`   Query: "${params.q}"`);
       console.log(`   Count: ${params.count}`);
@@ -98,9 +98,9 @@ export class BraveScrapingBeeCollector {
         timeout: 10000
       });
 
-      console.log(`📊 Brave Search Response:`);
+      console.log('📊 Brave Search Response:');
       console.log(`   Status: ${response.status}`);
-      console.log(`   Response structure:`, {
+      console.log('   Response structure:', {
         hasWeb: !!response.data?.web,
         hasResults: !!response.data?.web?.results,
         resultCount: response.data?.web?.results?.length || 0,
@@ -109,7 +109,7 @@ export class BraveScrapingBeeCollector {
       
       // Log actual response for debugging
       if (!response.data?.web?.results) {
-        console.log(`⚠️ Full response data:`, JSON.stringify(response.data, null, 2));
+        console.log('⚠️ Full response data:', JSON.stringify(response.data, null, 2));
       }
 
       if (response.data?.web?.results) {
@@ -154,8 +154,8 @@ export class BraveScrapingBeeCollector {
         article.snippet = searchResult.description || article.snippet;
         
         // Add search metadata
-        (article as Record<string, unknown>).search_query = originalQuery;
-        (article as Record<string, unknown>).search_rank = searchResult.url;
+        (article as unknown as Record<string, unknown>).search_query = originalQuery;
+        (article as unknown as Record<string, unknown>).search_rank = searchResult.url;
         
         return article;
       }
@@ -214,7 +214,7 @@ export class BraveScrapingBeeCollector {
   }
   
   private async testBraveAPI(): Promise<void> {
-    console.log(`🧪 Testing Brave API with simple query...`);
+    console.log('🧪 Testing Brave API with simple query...');
     try {
       const testResults = await this.braveSearchBroad('test', 1);
       console.log(`🧪 API Test Result: ${testResults.length > 0 ? 'SUCCESS' : 'NO RESULTS'} - Found ${testResults.length} results`);
@@ -222,7 +222,7 @@ export class BraveScrapingBeeCollector {
         console.log(`🧪 Sample result: ${testResults[0].title}`);
       }
     } catch (error) {
-      console.error(`🧪 API Test FAILED:`, error);
+      console.error('🧪 API Test FAILED:', error);
     }
   }
 

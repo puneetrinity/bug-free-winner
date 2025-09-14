@@ -316,30 +316,9 @@ app.post('/api/reports/generate-pdf-deep-dive', async (req, res) => {
         const { scored_item } = scorer.scoreContent(rawItem, 'brave-search-deep-dive');
         
         const contentItem = {
+          ...scored_item,
           source: 'brave-search-deep-dive',
-          source_url: rawItem.url,
-          title: rawItem.title,
-          url: rawItem.url,
-          content_hash: contentHash,
-          snippet: rawItem.snippet || rawItem.full_content?.substring(0, 300) + '...' || '',
-          full_content: rawItem.full_content || rawItem.snippet || '',
-          author: rawItem.author || 'Unknown',
-          published_at: rawItem.published_at || new Date(),
-          categories: rawItem.categories || [],
-          language: 'en',
-          
-          // Scores
-          domain_authority: scored_item.domain_authority,
-          indian_context_score: scored_item.indian_context_score,
-          freshness_score: scored_item.freshness_score,
-          extractability_score: scored_item.extractability_score,
-          composite_score: scored_item.composite_score,
-          
-          // Features
-          has_statistics: scored_item.has_statistics,
-          has_dates: scored_item.has_dates,
-          has_numbers: scored_item.has_numbers,
-          word_count: scored_item.word_count
+          content_hash: contentHash
         };
         
         scoredItems.push(contentItem);
@@ -648,26 +627,9 @@ app.post('/api/admin/collect', async (req, res) => {
             
             // Prepare for database insertion
             const contentItem = {
+              ...scored_item,
               source: sourceType,
-              source_url: rawItem.url,
-              title: rawItem.title,
-              url: rawItem.url,
               content_hash: contentHash,
-              snippet: rawItem.snippet || rawItem.full_content?.substring(0, 300) + '...' || '',
-              full_content: rawItem.full_content || rawItem.snippet || '',
-              author: rawItem.author || 'Unknown',
-              published_at: rawItem.published_at || new Date(),
-              categories: rawItem.categories || ['hr'],
-              language: 'en',
-              domain_authority: scored_item.domain_authority,
-              indian_context_score: scored_item.indian_context_score,
-              freshness_score: scored_item.freshness_score,
-              extractability_score: scored_item.extractability_score,
-              composite_score: scored_item.composite_score,
-              has_statistics: scored_item.has_statistics,
-              has_dates: scored_item.has_dates,
-              has_numbers: scored_item.has_numbers,
-              word_count: scored_item.word_count,
               scraper_version: '1.0',
               processing_notes: `Collected via Brave Search + ScrapingBee on ${new Date().toISOString()}`
             };
