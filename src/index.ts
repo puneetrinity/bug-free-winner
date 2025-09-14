@@ -397,6 +397,83 @@ app.post('/api/admin/test-db', async (req, res) => {
   }
 });
 
+// Content collection endpoint
+app.post('/api/admin/collect', async (req, res) => {
+  try {
+    console.log('🔄 Starting content collection...');
+    
+    // Simple auth check - in production, use proper auth
+    const authHeader = req.headers.authorization;
+    if (authHeader !== 'Bearer collect-content-2024') {
+      console.log('❌ Unauthorized collection attempt');
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Unauthorized' 
+      });
+    }
+
+    // Import and run collection
+    const { PIBScraper } = await import('./scrapers/pib-scraper');
+    const { RSSParser } = await import('./scrapers/rss-parser'); 
+    const { ContentScorer } = await import('./scoring/content-scorer');
+    const { BraveScrapingBeeCollector } = await import('./collectors/brave-scrapingbee-collector');
+    
+    const scrapingBeeKey = process.env.SCRAPINGBEE_API_KEY;
+    const braveKey = process.env.BRAVE_API_KEY;
+    
+    if (!braveKey || !scrapingBeeKey) {
+      return res.status(500).json({
+        success: false,
+        error: 'Missing required API keys'
+      });
+    }
+
+    console.log('🐝🔍 Initializing Brave + ScrapingBee collector...');
+    const collector = new BraveScrapingBeeCollector(braveKey, scrapingBeeKey);
+    
+    // Collect content for common HR topics
+    const searchQueries = [
+      'employee attrition trends India 2024',
+      'employee retention strategies India',
+      'remote work policies Indian companies',
+      'HR technology trends India',
+      'workplace culture India'
+    ];
+    
+    const results: any[] = [];
+    let totalCollected = 0;
+    
+    try {
+      console.log(`🔍 Collecting content for ${searchQueries.length} queries...`);
+      const items = await collector.collectHRContent(searchQueries, 5);
+      results.push({ 
+        message: `Collected content for ${searchQueries.length} queries`, 
+        collected: items.length,
+        queries: searchQueries
+      });
+      totalCollected += items.length;
+    } catch (error: any) {
+      console.error(`Error during collection:`, error.message);
+      results.push({ error: error.message });
+    }
+    
+    console.log(`✅ Collection completed! Total items: ${totalCollected}`);
+    
+    res.json({ 
+      success: true, 
+      message: `Content collection completed! Collected ${totalCollected} items.`,
+      results: results
+    });
+    
+  } catch (error: any) {
+    console.error('Collection failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 // Simple database migration endpoint
 app.post('/api/admin/migrate', async (req, res) => {
   try {
