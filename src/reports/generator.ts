@@ -143,7 +143,7 @@ export class ReportGenerator {
       console.error('Report generation failed:', error);
       return {
         success: false,
-        error: error.message || 'Unknown error occurred'
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }
@@ -263,8 +263,9 @@ Use [Source X] citations throughout. Focus on Indian HR market context.`
       return content;
 
     } catch (error) {
-      console.error('Groq API error:', error.response?.data || error.message);
-      throw new Error(`Failed to generate content: ${error.response?.data?.error?.message || error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Groq API error:', error);
+      throw new Error(`Failed to generate content: ${errorMessage}`);
     }
   }
 

@@ -44,6 +44,7 @@
     "npm": ">=10.0.0"
   },
   "devDependencies": {
-    "@types/node": "^20.10.4"
+    "@types/node": "^20.10.4",
+    "@types/swagger-jsdoc": "^6.0.4"
   }
 }

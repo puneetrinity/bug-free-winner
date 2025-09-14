@@ -102,7 +102,7 @@ class ContentCollector {
           console.log(`  📝 Processed ${processed}/${scoredItems.length} items...`);
         }
       } catch (error) {
-        console.error(`❌ Failed to insert item "${item.title.substring(0, 50)}...":`, error.message);
+        console.error(`❌ Failed to insert item "${item.title.substring(0, 50)}...":`, error instanceof Error ? error.message : error);
       }
     }
 

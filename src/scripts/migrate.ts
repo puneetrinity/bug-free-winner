@@ -43,7 +43,8 @@ class DatabaseMigrator {
           
         } catch (error) {
           // Some statements might fail if tables already exist
-          if (error.message.includes('already exists')) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          if (errorMessage.includes('already exists')) {
             const operation = this.extractOperation(statement);
             console.log(`  ⚠️  ${i + 1}/${statements.length}: ${operation} (already exists)`);
           } else {
@@ -71,7 +72,7 @@ class DatabaseMigrator {
         await db.query(`DROP TABLE IF EXISTS ${table} CASCADE;`);
         console.log(`  🗑️  Dropped table: ${table}`);
       } catch (error) {
-        console.warn(`Failed to drop ${table}:`, error.message);
+        console.warn(`Failed to drop ${table}:`, error instanceof Error ? error.message : error);
       }
     }
 
@@ -80,7 +81,7 @@ class DatabaseMigrator {
       await db.query('DROP EXTENSION IF EXISTS "uuid-ossp";');
       console.log('  🗑️  Dropped extension: uuid-ossp');
     } catch (error) {
-      console.warn('Failed to drop uuid-ossp extension:', error.message);
+      console.warn('Failed to drop uuid-ossp extension:', error instanceof Error ? error.message : error);
     }
 
     console.log('✅ Database reset completed');
@@ -146,12 +147,12 @@ class DatabaseMigrator {
         // Log key columns for verification
         const keyColumns = result.rows
           .slice(0, 3)
-          .map(row => `${row.column_name}(${row.data_type})`)
+          .map((row: any) => `${row.column_name}(${row.data_type})`)
           .join(', ');
         console.log(`     ${keyColumns}...`);
         
       } catch (error) {
-        console.error(`  ❌ Failed to verify table ${table}:`, error.message);
+        console.error(`  ❌ Failed to verify table ${table}:`, error instanceof Error ? error.message : error);
       }
     }
   }
