@@ -334,7 +334,7 @@ export class PDFGenerator {
                         <div class="source-meta">
                             <span>Published: ${source.published_at?.toISOString().split('T')[0] || 'Unknown'}</span> |
                             <span>Source: ${source.source}</span> |
-                            <span>Quality Score: ${source.composite_score.toFixed(2)}</span>
+                            <span>Quality Score: ${Number(source.composite_score).toFixed(2)}</span>
                         </div>
                         ${source.snippet ? `<p class="source-snippet">${source.snippet}</p>` : ''}
                     </div>
@@ -357,7 +357,7 @@ export class PDFGenerator {
                 <tr><td>Generation Time</td><td>${report.generation_time_ms}ms</td></tr>
                 <tr><td>Total Sources</td><td>${sources.length}</td></tr>
                 <tr><td>Total Citations</td><td>${citations.length}</td></tr>
-                <tr><td>Average Source Quality</td><td>${(sources.reduce((sum, s) => sum + s.composite_score, 0) / sources.length).toFixed(3)}</td></tr>
+                <tr><td>Average Source Quality</td><td>${(sources.reduce((sum, s) => sum + Number(s.composite_score), 0) / sources.length).toFixed(3)}</td></tr>
             </table>
         </div>
         
