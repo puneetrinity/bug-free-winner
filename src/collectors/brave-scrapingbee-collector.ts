@@ -25,14 +25,24 @@ export class BraveScrapingBeeCollector {
   async collectHRContent(queries: string[], maxResultsPerQuery: number = 5): Promise<RawContentItem[]> {
     console.log('🔍 Starting Brave Search + ScrapingBee collection...');
     
+    // First, let's test with a simple query to verify API works
+    await this.testBraveAPI();
+    
     const allResults: RawContentItem[] = [];
     
     for (const query of queries) {
       console.log(`🎯 Searching for: "${query}"`);
       
       try {
-        // Search for query results
-        const searchResults = await this.braveSearch(query, maxResultsPerQuery);
+        // Try both restricted and unrestricted searches
+        let searchResults = await this.braveSearch(query, maxResultsPerQuery);
+        
+        // If no results with site restriction, try without it
+        if (searchResults.length === 0) {
+          console.log(`🔄 No results with site restriction, trying broader search...`);
+          searchResults = await this.braveSearchBroad(query, maxResultsPerQuery);
+        }
+        
         console.log(`📊 Found ${searchResults.length} results for "${query}"`);
         
         // Scrape full content using ScrapingBee
@@ -72,6 +82,12 @@ export class BraveScrapingBeeCollector {
         textFormat: 'raw'
       };
 
+      console.log(`🔍 Brave Search Request:`);
+      console.log(`   URL: ${this.braveBaseUrl}`);
+      console.log(`   Query: "${params.q}"`);
+      console.log(`   Count: ${params.count}`);
+      console.log(`   API Key: ${this.braveApiKey ? 'Present' : 'Missing'}`);
+
       const response = await axios.get(this.braveBaseUrl, {
         headers: {
           'X-Subscription-Token': this.braveApiKey,
@@ -82,20 +98,46 @@ export class BraveScrapingBeeCollector {
         timeout: 10000
       });
 
+      console.log(`📊 Brave Search Response:`);
+      console.log(`   Status: ${response.status}`);
+      console.log(`   Response structure:`, {
+        hasWeb: !!response.data?.web,
+        hasResults: !!response.data?.web?.results,
+        resultCount: response.data?.web?.results?.length || 0,
+        errorMessage: response.data?.error?.message || 'None'
+      });
+      
+      // Log actual response for debugging
+      if (!response.data?.web?.results) {
+        console.log(`⚠️ Full response data:`, JSON.stringify(response.data, null, 2));
+      }
+
       if (response.data?.web?.results) {
-        return response.data.web.results.filter((result: BraveSearchResult) => {
+        const results = response.data.web.results.filter((result: BraveSearchResult) => {
           // Only filter out social media and obvious spam
           const url = result.url.toLowerCase();
           const skipSites = ['facebook.com', 'twitter.com', 'linkedin.com', 'youtube.com', 'instagram.com'];
           
           return !skipSites.some(site => url.includes(site));
         });
+        
+        console.log(`✅ Filtered results: ${results.length} (removed ${response.data.web.results.length - results.length} social media)`);
+        return results;
       }
 
       return [];
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ Brave Search API error:', errorMessage);
+      
+      // Log additional error details for debugging
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number; data?: unknown; statusText?: string } };
+        console.error('   HTTP Status:', axiosError.response?.status);
+        console.error('   Status Text:', axiosError.response?.statusText);
+        console.error('   Response Data:', JSON.stringify(axiosError.response?.data, null, 2));
+      }
+      
       return [];
     }
   }
@@ -124,6 +166,63 @@ export class BraveScrapingBeeCollector {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error(`❌ Failed to scrape ${searchResult.url}:`, errorMessage);
       return null;
+    }
+  }
+
+  private async braveSearchBroad(query: string, count: number): Promise<BraveSearchResult[]> {
+    try {
+      const params = {
+        q: query, // No site restriction
+        count: count,
+        offset: 0,
+        mkt: 'en-IN',
+        safesearch: 'moderate',
+        textDecorations: false,
+        textFormat: 'raw'
+      };
+
+      console.log(`🌍 Broad Brave Search Request: "${params.q}"`);
+
+      const response = await axios.get(this.braveBaseUrl, {
+        headers: {
+          'X-Subscription-Token': this.braveApiKey,
+          'Accept': 'application/json',
+          'Accept-Encoding': 'gzip'
+        },
+        params,
+        timeout: 10000
+      });
+
+      console.log(`🌍 Broad search - Status: ${response.status}, Results: ${response.data?.web?.results?.length || 0}`);
+
+      if (response.data?.web?.results) {
+        const results = response.data.web.results.filter((result: BraveSearchResult) => {
+          const url = result.url.toLowerCase();
+          const skipSites = ['facebook.com', 'twitter.com', 'linkedin.com', 'youtube.com', 'instagram.com'];
+          return !skipSites.some(site => url.includes(site));
+        });
+        
+        return results;
+      }
+
+      return [];
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Broad Brave Search API error:', errorMessage);
+      return [];
+    }
+  }
+  
+  private async testBraveAPI(): Promise<void> {
+    console.log(`🧪 Testing Brave API with simple query...`);
+    try {
+      const testResults = await this.braveSearchBroad('test', 1);
+      console.log(`🧪 API Test Result: ${testResults.length > 0 ? 'SUCCESS' : 'NO RESULTS'} - Found ${testResults.length} results`);
+      if (testResults.length > 0) {
+        console.log(`🧪 Sample result: ${testResults[0].title}`);
+      }
+    } catch (error) {
+      console.error(`🧪 API Test FAILED:`, error);
     }
   }
 
