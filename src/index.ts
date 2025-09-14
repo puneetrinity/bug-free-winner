@@ -445,13 +445,86 @@ app.post('/api/admin/collect', async (req, res) => {
     
     try {
       console.log(`🔍 Collecting content for ${searchQueries.length} queries...`);
-      const items = await collector.collectHRContent(searchQueries, 5);
-      results.push({ 
-        message: `Collected content for ${searchQueries.length} queries`, 
-        collected: items.length,
-        queries: searchQueries
-      });
-      totalCollected += items.length;
+      const rawItems = await collector.collectHRContent(searchQueries, 5);
+      
+      if (rawItems.length === 0) {
+        results.push({ message: 'No raw content collected', collected: 0 });
+      } else {
+        console.log(`📊 Processing and scoring ${rawItems.length} raw items...`);
+        
+        // Import ContentScorer and crypto for hashing
+        const { ContentScorer } = await import('./scoring/content-scorer');
+        const crypto = await import('crypto');
+        const scorer = new ContentScorer();
+        
+        let processedCount = 0;
+        
+        for (const rawItem of rawItems) {
+          try {
+            // Generate content hash for deduplication
+            const contentHash = crypto.createHash('md5')
+              .update(`${rawItem.title}${rawItem.url}`)
+              .digest('hex');
+            
+            // Determine source based on URL domain
+            const getSourceFromUrl = (url: string): 'pib' | 'peoplematters' | 'hrkatha' => {
+              const domain = url.toLowerCase();
+              if (domain.includes('pib.gov.in')) return 'pib';
+              if (domain.includes('peoplematters.in')) return 'peoplematters';
+              if (domain.includes('hrkatha.com')) return 'hrkatha';
+              // Default to pib for government/unknown sources
+              return 'pib';
+            };
+            
+            const sourceType = getSourceFromUrl(rawItem.url);
+            
+            // Score the content
+            const { scored_item } = scorer.scoreContent(rawItem, sourceType);
+            
+            // Prepare for database insertion
+            const contentItem = {
+              source: sourceType,
+              source_url: rawItem.url,
+              title: rawItem.title,
+              url: rawItem.url,
+              content_hash: contentHash,
+              snippet: rawItem.snippet || rawItem.full_content?.substring(0, 300) + '...' || '',
+              full_content: rawItem.full_content || rawItem.snippet || '',
+              author: rawItem.author || 'Unknown',
+              published_at: rawItem.published_at || new Date(),
+              categories: rawItem.categories || ['hr'],
+              language: 'en',
+              domain_authority: scored_item.domain_authority,
+              indian_context_score: scored_item.indian_context_score,
+              freshness_score: scored_item.freshness_score,
+              extractability_score: scored_item.extractability_score,
+              composite_score: scored_item.composite_score,
+              has_statistics: scored_item.has_statistics,
+              has_dates: scored_item.has_dates,
+              has_numbers: scored_item.has_numbers,
+              word_count: scored_item.word_count,
+              scraper_version: '1.0',
+              processing_notes: `Collected via Brave Search + ScrapingBee on ${new Date().toISOString()}`
+            };
+            
+            // Insert into database
+            await db.insertContentItem(contentItem);
+            processedCount++;
+            console.log(`✅ Processed and saved: ${rawItem.title.substring(0, 50)}...`);
+            
+          } catch (error: any) {
+            console.error(`❌ Failed to process item "${rawItem.title}":`, error.message);
+          }
+        }
+        
+        results.push({ 
+          message: `Collected and processed content for ${searchQueries.length} queries`, 
+          collected: rawItems.length,
+          processed: processedCount,
+          queries: searchQueries
+        });
+        totalCollected += processedCount;
+      }
     } catch (error: any) {
       console.error(`Error during collection:`, error.message);
       results.push({ error: error.message });
