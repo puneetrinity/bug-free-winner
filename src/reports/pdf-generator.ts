@@ -42,7 +42,7 @@ export class PDFGenerator {
         '--disable-gpu',
         '--no-first-run'
       ],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser'
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable'
     });
 
     try {
