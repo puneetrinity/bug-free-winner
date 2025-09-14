@@ -11,11 +11,6 @@ interface BraveSearchResult {
   locations?: string[];
 }
 
-interface BraveSearchResponse {
-  web: {
-    results: BraveSearchResult[];
-  };
-}
 
 export class BraveScrapingBeeCollector {
   private braveApiKey: string;
@@ -54,8 +49,9 @@ export class BraveScrapingBeeCollector {
         // Small delay between queries to be respectful
         await this.delay(1000);
         
-      } catch (error: any) {
-        console.error(`❌ Error collecting content for query "${query}":`, error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`❌ Error collecting content for query "${query}":`, errorMessage);
       }
     }
     
@@ -97,8 +93,9 @@ export class BraveScrapingBeeCollector {
       }
 
       return [];
-    } catch (error: any) {
-      console.error('❌ Brave Search API error:', error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Brave Search API error:', errorMessage);
       return [];
     }
   }
@@ -115,16 +112,17 @@ export class BraveScrapingBeeCollector {
         article.snippet = searchResult.description || article.snippet;
         
         // Add search metadata
-        (article as any).search_query = originalQuery;
-        (article as any).search_rank = searchResult.url;
+        (article as Record<string, unknown>).search_query = originalQuery;
+        (article as Record<string, unknown>).search_rank = searchResult.url;
         
         return article;
       }
       
       return null;
       
-    } catch (error: any) {
-      console.error(`❌ Failed to scrape ${searchResult.url}:`, error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`❌ Failed to scrape ${searchResult.url}:`, errorMessage);
       return null;
     }
   }
@@ -133,7 +131,7 @@ export class BraveScrapingBeeCollector {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  async checkQuotas(): Promise<{brave: any, scrapingBee: {remaining: number, total: number}}> {
+  async checkQuotas(): Promise<{brave: unknown, scrapingBee: {remaining: number, total: number}}> {
     console.log('📊 Checking API quotas...');
     
     const scrapingBeeQuota = await this.scrapingBee.checkApiQuota();

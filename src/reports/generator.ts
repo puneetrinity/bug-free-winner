@@ -1,7 +1,7 @@
 import axios from 'axios';
 import crypto from 'crypto';
 import db from '../db/connection';
-import { ContentItem, Report, Citation } from '../types';
+import { ContentItem, Report } from '../types';
 import { PDFGenerator } from './pdf-generator';
 
 interface GroqMessage {
@@ -245,7 +245,7 @@ Use [Source X] citations throughout. Focus on Indian HR market context.`
     ];
 
     try {
-      const response = await axios.post(this.groqApiUrl, {
+      const response = await axios.post<GroqResponse>(this.groqApiUrl, {
         model: 'llama-3.3-70b-versatile',
         messages,
         temperature: 0.3,
@@ -262,7 +262,7 @@ Use [Source X] citations throughout. Focus on Indian HR market context.`
       
       return content;
 
-    } catch (error) {
+    } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Groq API error:', error);
       throw new Error(`Failed to generate content: ${errorMessage}`);
@@ -293,7 +293,7 @@ Note: This analysis is based on ${sourceCount} recent sources from the Indian HR
     ];
 
     try {
-      const response = await axios.post(this.groqApiUrl, {
+      const response = await axios.post<GroqResponse>(this.groqApiUrl, {
         model: 'llama-3.3-70b-versatile',
         messages,
         temperature: 0.2,
@@ -307,7 +307,7 @@ Note: This analysis is based on ${sourceCount} recent sources from the Indian HR
 
       return response.data.choices[0].message.content;
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Executive summary generation failed:', error);
       return `Executive Summary: This research report analyzes recent developments in the Indian HR market based on ${sourceCount} sources. The analysis covers key trends, statistical insights, and strategic implications for HR professionals and business leaders.`;
     }
@@ -342,7 +342,7 @@ Note: This analysis is based on ${sourceCount} recent sources from the Indian HR
 
     // Split content into sections (simple heuristic based on headers)
     const sections: ReportSection[] = [];
-    const sectionRegex = /^(#{1,3}|\d+\.)\s+(.+)$/gm;
+    // const sectionRegex = /^(#{1,3}|\d+\.)\s+(.+)$/gm; // Currently unused
     let currentSection = '';
     let currentContent = '';
     
@@ -382,7 +382,10 @@ Note: This analysis is based on ${sourceCount} recent sources from the Indian HR
 
   private extractCitationNumbers(text: string): number[] {
     const matches = text.match(/\[Source (\d+)\]/g) || [];
-    return matches.map(match => parseInt(match.match(/\d+/)![0]));
+    return matches.map(match => {
+      const numberMatch = match.match(/\d+/);
+      return parseInt(numberMatch ? numberMatch[0] : '0');
+    });
   }
 
   private extractKeywords(topic: string): string[] {
@@ -463,7 +466,7 @@ Note: This analysis is based on ${sourceCount} recent sources from the Indian HR
   private convertToHTML(
     sections: ReportSection[], 
     sources: ContentItem[], 
-    citations: { number: number; sourceId: string; text: string; context: string; }[]
+    _citations: { number: number; sourceId: string; text: string; context: string; }[]
   ): string {
     let html = '<div class="research-report">';
     
@@ -481,7 +484,7 @@ Note: This analysis is based on ${sourceCount} recent sources from the Indian HR
       html += '<h2>Sources</h2>';
       html += '<ol>';
       
-      sources.forEach((source, index) => {
+      sources.forEach((source, _index) => {
         html += '<li>';
         html += `<strong>${source.title}</strong><br>`;
         html += `<a href="${source.url}" target="_blank">${source.url}</a><br>`;

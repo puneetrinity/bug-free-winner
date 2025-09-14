@@ -273,7 +273,7 @@ app.post('/api/reports/generate-pdf-deep-dive', async (req, res) => {
     }
 
     // Import the collector for live search
-    const { BraveScrapingBeeCollector, HR_SEARCH_QUERIES } = await import('./collectors/brave-scrapingbee-collector');
+    const { BraveScrapingBeeCollector } = await import('./collectors/brave-scrapingbee-collector');
     const { ContentScorer } = await import('./scoring/content-scorer');
     
     console.log('🌐 Starting live content collection...');
@@ -305,10 +305,11 @@ app.post('/api/reports/generate-pdf-deep-dive', async (req, res) => {
     console.log(`📊 Processing and scoring ${rawItems.length} live items...`);
     
     // Score and prepare content items for database insertion
-    const scoredItems: any[] = [];
+    const scoredItems: unknown[] = [];
     for (const rawItem of rawItems) {
       try {
-        const contentHash = require('crypto').createHash('md5')
+        const crypto = await import('crypto');
+        const contentHash = crypto.createHash('md5')
           .update(`${rawItem.title}${rawItem.url}`)
           .digest('hex');
         
@@ -451,10 +452,11 @@ app.get('/api/reports/:id/pdf', async (req, res) => {
       res.setHeader('Content-Disposition', `inline; filename="${report.title.replace(/[^a-zA-Z0-9\s]/g, '_')}.pdf"`);
       
       // Stream the PDF file
-      const readStream = require('fs').createReadStream(pdfPath);
+      const fs = await import('fs');
+      const readStream = fs.createReadStream(pdfPath);
       readStream.pipe(res);
       
-    } catch (fileError) {
+    } catch (_fileError) {
       console.error('PDF file not found:', report.pdf_path);
       return res.status(404).json({
         success: false,

@@ -20,12 +20,12 @@ class Database {
       console.error('PostgreSQL pool error:', err);
     });
     
-    this.pool.on('connect', (client) => {
+    this.pool.on('connect', (_client) => {
       console.log('New PostgreSQL connection established');
     });
   }
 
-  async query(text: string, params?: any[]): Promise<any> {
+  async query(text: string, params?: unknown[]): Promise<any> {
     const start = Date.now();
     const maxRetries = 3;
     let lastError;
@@ -38,22 +38,29 @@ class Database {
           console.log(`Query executed on attempt ${attempt}`, { text: text.substring(0, 100), duration, rows: res.rowCount });
         }
         return res;
-      } catch (error: any) {
+      } catch (error: unknown) {
         lastError = error;
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorCode = error && typeof error === 'object' && 'code' in error ? (error as Record<string, unknown>).code : 'UNKNOWN';
         console.error(`Database query error (attempt ${attempt}/${maxRetries})`, { 
           text: text.substring(0, 100), 
-          error: error.message,
-          code: error.code 
+          error: errorMessage,
+          code: errorCode 
         });
         
         // If it's a connection error, wait and retry
-        if (attempt < maxRetries && (
-          error.code === 'ECONNRESET' || 
-          error.code === 'ENOTFOUND' ||
-          error.code === 'ETIMEDOUT' ||
-          error.message?.includes('Connection terminated') ||
-          error.message?.includes('connection timeout')
-        )) {
+        const isRetryableError = error && typeof error === 'object' && 'code' in error && (
+          (error as Record<string, unknown>).code === 'ECONNRESET' || 
+          (error as Record<string, unknown>).code === 'ENOTFOUND' ||
+          (error as Record<string, unknown>).code === 'ETIMEDOUT'
+        ) || (
+          error instanceof Error && (
+            error.message.includes('Connection terminated') ||
+            error.message.includes('connection timeout')
+          )
+        );
+        
+        if (attempt < maxRetries && isRetryableError) {
           const waitTime = attempt * 2000; // Progressive backoff: 2s, 4s
           console.log(`Retrying in ${waitTime}ms...`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
@@ -119,7 +126,7 @@ class Database {
       SELECT * FROM content_items 
       WHERE 1=1
     `;
-    const values: any[] = [];
+    const values: unknown[] = [];
     let paramCount = 0;
 
     if (options.source) {

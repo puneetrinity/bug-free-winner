@@ -16,7 +16,7 @@ export class ContentScorer {
   ];
 
   scoreContent(item: RawContentItem, source: string): {
-    scored_item: any,
+    scored_item: Record<string, unknown>,
     components: ScoringComponents
   } {
     const domain = this.extractDomain(item.url);
@@ -80,7 +80,7 @@ export class ContentScorer {
   }
 
   private calculateDomainAuthority(domain: string): number {
-    return (this.domainScores as any)[domain] || this.domainScores.default;
+    return (this.domainScores as Record<string, number>)[domain] || this.domainScores.default;
   }
 
   private calculateIndianContext(content: string): number {
@@ -167,7 +167,7 @@ export class ContentScorer {
     const datePatterns = [
       /\b(?:19|20)\d{2}\b/,
       /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/i,
-      /\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}/
+      /\d{1,2}[-/]\d{1,2}[-/]\d{2,4}/
     ];
     
     return datePatterns.some(pattern => pattern.test(content));
@@ -201,12 +201,12 @@ export class ContentScorer {
     return cleaned.length > maxLength ? cleaned.substring(0, maxLength) + '...' : cleaned;
   }
 
-  private getSourceUrl(source: string): string {
+  private getSourceUrl(_source: string): string {
     return 'https://search-based-content.com'; // Generic placeholder since we're search-based now
   }
 
   // Utility method to batch score multiple items
-  scoreMultipleItems(items: RawContentItem[], source: string): any[] {
+  scoreMultipleItems(items: RawContentItem[], source: string): Record<string, unknown>[] {
     console.log(`🔢 Scoring ${items.length} items from ${source}...`);
     
     const scoredItems = items.map(item => {
