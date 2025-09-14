@@ -91,11 +91,65 @@
                     <div class="bg-white rounded-lg shadow">
                         <div class="p-6 border-b">
                             <h2 class="text-xl font-semibold text-gray-900">Generate New Report</h2>
-                            <p class="text-gray-600 mt-1">Create a comprehensive HR research report using AI analysis</p>
+                            <p class="text-gray-600 mt-1">Choose between quick content analysis or comprehensive PDF reports with charts</p>
                         </div>
                         
                         <form @submit.prevent="generateReport()" class="p-6">
                             <div class="space-y-6">
+                                <!-- Report Type Selection -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-3">Report Type</label>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div 
+                                            @click="form.reportType = 'content'"
+                                            :class="form.reportType === 'content' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'"
+                                            class="border-2 rounded-lg p-4 cursor-pointer hover:border-gray-300 transition-colors"
+                                        >
+                                            <div class="flex items-center justify-between mb-2">
+                                                <h3 class="font-medium text-gray-900 flex items-center">
+                                                    <i class="fas fa-list-ul mr-2 text-gray-600"></i>
+                                                    Quick Content Analysis
+                                                </h3>
+                                                <div 
+                                                    :class="form.reportType === 'content' ? 'bg-blue-500' : 'bg-gray-300'"
+                                                    class="w-5 h-5 rounded-full flex items-center justify-center"
+                                                >
+                                                    <i x-show="form.reportType === 'content'" class="fas fa-check text-white text-xs"></i>
+                                                </div>
+                                            </div>
+                                            <p class="text-sm text-gray-600">Fast analysis using existing database content</p>
+                                            <div class="mt-2 text-xs text-gray-500">
+                                                <span class="inline-block mr-3"><i class="fas fa-clock mr-1"></i>~30 seconds</span>
+                                                <span class="inline-block"><i class="fas fa-file-alt mr-1"></i>HTML format</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div 
+                                            @click="form.reportType = 'pdf'"
+                                            :class="form.reportType === 'pdf' ? 'border-green-500 bg-green-50' : 'border-gray-200'"
+                                            class="border-2 rounded-lg p-4 cursor-pointer hover:border-gray-300 transition-colors"
+                                        >
+                                            <div class="flex items-center justify-between mb-2">
+                                                <h3 class="font-medium text-gray-900 flex items-center">
+                                                    <i class="fas fa-file-pdf mr-2 text-red-600"></i>
+                                                    Deep Dive PDF Report
+                                                </h3>
+                                                <div 
+                                                    :class="form.reportType === 'pdf' ? 'bg-green-500' : 'bg-gray-300'"
+                                                    class="w-5 h-5 rounded-full flex items-center justify-center"
+                                                >
+                                                    <i x-show="form.reportType === 'pdf'" class="fas fa-check text-white text-xs"></i>
+                                                </div>
+                                            </div>
+                                            <p class="text-sm text-gray-600">Live search + scraping with charts and comprehensive analysis</p>
+                                            <div class="mt-2 text-xs text-gray-500">
+                                                <span class="inline-block mr-3"><i class="fas fa-clock mr-1"></i>~3-5 minutes</span>
+                                                <span class="inline-block"><i class="fas fa-chart-bar mr-1"></i>4-page PDF with charts</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Research Topic</label>
                                     <input 
@@ -107,41 +161,111 @@
                                     >
                                 </div>
                                 
+                                <!-- Configuration Options -->
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Max Sources</label>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            <span x-show="form.reportType === 'content'">Max Database Sources</span>
+                                            <span x-show="form.reportType === 'pdf'">Live Search Results</span>
+                                        </label>
                                         <select x-model="form.maxSources" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                            <option value="5">5 sources</option>
-                                            <option value="10" selected>10 sources</option>
-                                            <option value="15">15 sources</option>
-                                            <option value="20">20 sources</option>
+                                            <template x-if="form.reportType === 'content'">
+                                                <div>
+                                                    <option value="5">5 sources</option>
+                                                    <option value="10" selected>10 sources</option>
+                                                    <option value="15">15 sources</option>
+                                                    <option value="20">20 sources</option>
+                                                </div>
+                                            </template>
+                                            <template x-if="form.reportType === 'pdf'">
+                                                <div>
+                                                    <option value="15">15 results (Quick)</option>
+                                                    <option value="25" selected>25 results (Standard)</option>
+                                                    <option value="35">35 results (Comprehensive)</option>
+                                                    <option value="50">50 results (Deep Dive)</option>
+                                                </div>
+                                            </template>
                                         </select>
                                     </div>
                                     
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Time Range</label>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            <span x-show="form.reportType === 'content'">Database Time Range</span>
+                                            <span x-show="form.reportType === 'pdf'">Search Recency</span>
+                                        </label>
                                         <select x-model="form.timeRange" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                            <option value="7">Last 7 days</option>
-                                            <option value="14">Last 2 weeks</option>
-                                            <option value="30" selected>Last 30 days</option>
-                                            <option value="60">Last 2 months</option>
-                                            <option value="90">Last 3 months</option>
+                                            <template x-if="form.reportType === 'content'">
+                                                <div>
+                                                    <option value="7">Last 7 days</option>
+                                                    <option value="14">Last 2 weeks</option>
+                                                    <option value="30" selected>Last 30 days</option>
+                                                    <option value="60">Last 2 months</option>
+                                                    <option value="90">Last 3 months</option>
+                                                </div>
+                                            </template>
+                                            <template x-if="form.reportType === 'pdf'">
+                                                <div>
+                                                    <option value="1">Past 24 hours</option>
+                                                    <option value="7" selected>Past week</option>
+                                                    <option value="30">Past month</option>
+                                                    <option value="90">Past 3 months</option>
+                                                </div>
+                                            </template>
                                         </select>
+                                    </div>
+                                </div>
+
+                                <!-- PDF-specific options -->
+                                <div x-show="form.reportType === 'pdf'" class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                    <h4 class="font-medium text-green-800 mb-2 flex items-center">
+                                        <i class="fas fa-chart-pie mr-2"></i>
+                                        Deep Dive Features
+                                    </h4>
+                                    <div class="text-sm text-green-700 space-y-1">
+                                        <div class="flex items-center"><i class="fas fa-check mr-2"></i>Live Brave Search + ScrapingBee scraping</div>
+                                        <div class="flex items-center"><i class="fas fa-check mr-2"></i>Statistical analysis with charts and graphs</div>
+                                        <div class="flex items-center"><i class="fas fa-check mr-2"></i>4-page professional PDF format</div>
+                                        <div class="flex items-center"><i class="fas fa-check mr-2"></i>Executive summary and recommendations</div>
+                                        <div class="flex items-center"><i class="fas fa-check mr-2"></i>Citation tracking and source validation</div>
                                     </div>
                                 </div>
                                 
                                 <button 
                                     type="submit" 
                                     :disabled="isGenerating"
-                                    class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    :class="{
+                                        'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500': form.reportType === 'content',
+                                        'bg-green-600 hover:bg-green-700 focus:ring-green-500': form.reportType === 'pdf'
+                                    }"
+                                    class="w-full text-white py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
                                     <span x-show="!isGenerating" class="flex items-center justify-center">
-                                        <i class="fas fa-magic mr-2"></i>
-                                        Generate Report
+                                        <template x-if="form.reportType === 'content'">
+                                            <div class="flex items-center">
+                                                <i class="fas fa-list-ul mr-2"></i>
+                                                Generate Content Report (~30s)
+                                            </div>
+                                        </template>
+                                        <template x-if="form.reportType === 'pdf'">
+                                            <div class="flex items-center">
+                                                <i class="fas fa-file-pdf mr-2"></i>
+                                                Generate Deep Dive PDF (~3-5 min)
+                                            </div>
+                                        </template>
                                     </span>
                                     <span x-show="isGenerating" class="flex items-center justify-center">
-                                        <i class="fas fa-spinner fa-spin mr-2"></i>
-                                        Generating Report...
+                                        <template x-if="form.reportType === 'content'">
+                                            <div class="flex items-center">
+                                                <i class="fas fa-spinner fa-spin mr-2"></i>
+                                                Analyzing Database Content...
+                                            </div>
+                                        </template>
+                                        <template x-if="form.reportType === 'pdf'">
+                                            <div class="flex items-center">
+                                                <i class="fas fa-spinner fa-spin mr-2"></i>
+                                                Searching & Scraping Live Data...
+                                            </div>
+                                        </template>
                                     </span>
                                 </button>
                             </div>
@@ -208,33 +332,33 @@
                         </div>
                     </div>
                     
-                    <!-- Content Sources -->
+                    <!-- Collection Methods -->
                     <div class="bg-white rounded-lg shadow mt-6">
                         <div class="p-6 border-b">
-                            <h3 class="text-lg font-semibold text-gray-900">Content Sources</h3>
+                            <h3 class="text-lg font-semibold text-gray-900">Collection Methods</h3>
                         </div>
                         <div class="p-6">
                             <div class="space-y-4">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center space-x-3">
-                                        <div class="w-3 h-3 bg-green-400 rounded-full"></div>
-                                        <span class="text-sm font-medium">PIB Labour Ministry</span>
+                                        <div class="w-3 h-3 bg-blue-400 rounded-full"></div>
+                                        <span class="text-sm font-medium">Database Content</span>
                                     </div>
-                                    <span class="text-xs text-gray-500">Official</span>
+                                    <span class="text-xs text-gray-500">Fast Analysis</span>
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center space-x-3">
                                         <div class="w-3 h-3 bg-green-400 rounded-full"></div>
-                                        <span class="text-sm font-medium">PeopleMatters</span>
+                                        <span class="text-sm font-medium">Brave Search</span>
                                     </div>
-                                    <span class="text-xs text-gray-500">RSS Feed</span>
+                                    <span class="text-xs text-gray-500">Live Discovery</span>
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center space-x-3">
                                         <div class="w-3 h-3 bg-green-400 rounded-full"></div>
-                                        <span class="text-sm font-medium">HRKatha</span>
+                                        <span class="text-sm font-medium">ScrapingBee</span>
                                     </div>
-                                    <span class="text-xs text-gray-500">RSS Feed</span>
+                                    <span class="text-xs text-gray-500">Content Extraction</span>
                                 </div>
                             </div>
                         </div>
@@ -248,6 +372,7 @@
         function dashboard() {
             return {
                 form: {
+                    reportType: 'content',
                     topic: '',
                     maxSources: 10,
                     timeRange: 30
@@ -302,7 +427,12 @@
                     this.generationStatus = null;
 
                     try {
-                        const response = await fetch('/api/reports/generate', {
+                        // Choose endpoint based on report type
+                        const endpoint = this.form.reportType === 'pdf' 
+                            ? '/api/reports/generate-pdf-deep-dive'
+                            : '/api/reports/generate';
+
+                        const response = await fetch(endpoint, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -310,7 +440,8 @@
                             body: JSON.stringify({
                                 topic: this.form.topic,
                                 max_sources: parseInt(this.form.maxSources),
-                                time_range_days: parseInt(this.form.timeRange)
+                                time_range_days: parseInt(this.form.timeRange),
+                                report_type: this.form.reportType
                             })
                         });
 
@@ -318,9 +449,24 @@
 
                         if (data.success) {
                             this.generationStatus = 'success';
-                            this.lastReportUrl = `/api/reports/${data.report_id}`;
-                            this.recentReports.unshift(data.report);
-                            this.stats.totalReports = (parseInt(this.stats.totalReports.replace(/,/g, '')) + 1).toLocaleString();
+                            
+                            if (this.form.reportType === 'pdf') {
+                                // For PDF reports, directly download the PDF
+                                this.lastReportUrl = `/api/reports/${data.report_id}/pdf`;
+                                window.open(this.lastReportUrl, '_blank');
+                            } else {
+                                // For content reports, show the HTML version
+                                this.lastReportUrl = `/api/reports/${data.report_id}`;
+                            }
+                            
+                            // Add to recent reports list
+                            if (data.report) {
+                                this.recentReports.unshift(data.report);
+                            }
+                            
+                            // Update stats
+                            const currentCount = parseInt(this.stats.totalReports.replace(/,/g, '') || '0');
+                            this.stats.totalReports = (currentCount + 1).toLocaleString();
                         } else {
                             this.generationStatus = 'error';
                             this.errorMessage = data.error || 'Failed to generate report';

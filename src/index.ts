@@ -242,6 +242,152 @@ app.post('/api/reports/generate', async (req, res) => {
   }
 });
 
+// Generate deep dive PDF report with live search
+app.post('/api/reports/generate-pdf-deep-dive', async (req, res) => {
+  try {
+    const validatedData = GenerateReportSchema.parse(req.body);
+    
+    console.log(`🔍 Generating DEEP DIVE PDF report for topic: ${validatedData.topic}`);
+    console.log(`   Live search results: ${validatedData.max_sources}, Search recency: ${validatedData.time_range_days} days`);
+    
+    // Check if API keys are available for live search
+    const braveApiKey = process.env.BRAVE_SEARCH_API_KEY;
+    const scrapingBeeApiKey = process.env.SCRAPINGBEE_API_KEY;
+    
+    if (!braveApiKey || !scrapingBeeApiKey) {
+      return res.status(503).json({
+        success: false,
+        error: 'Deep dive PDF generation requires API keys for live search. Please configure BRAVE_SEARCH_API_KEY and SCRAPINGBEE_API_KEY environment variables.'
+      });
+    }
+
+    // Import the collector for live search
+    const { BraveScrapingBeeCollector, HR_SEARCH_QUERIES } = await import('./collectors/brave-scrapingbee-collector');
+    const { ContentScorer } = await import('./scoring/content-scorer');
+    
+    console.log('🌐 Starting live content collection...');
+    
+    // Create dynamic search queries based on the topic
+    const topicQueries = [
+      validatedData.topic,
+      `${validatedData.topic} India statistics`,
+      `${validatedData.topic} Indian companies trends`,
+      `${validatedData.topic} market research India`,
+      `${validatedData.topic} survey data analysis`
+    ];
+    
+    // Initialize collector and scorer
+    const collector = new BraveScrapingBeeCollector(braveApiKey, scrapingBeeApiKey);
+    const scorer = new ContentScorer();
+    
+    // Collect live content
+    const maxPerQuery = Math.max(3, Math.floor(validatedData.max_sources / topicQueries.length));
+    const rawItems = await collector.collectHRContent(topicQueries, maxPerQuery);
+    
+    if (rawItems.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'No live content found for the specified topic'
+      });
+    }
+    
+    console.log(`📊 Processing and scoring ${rawItems.length} live items...`);
+    
+    // Score and prepare content items for database insertion
+    const scoredItems: any[] = [];
+    for (const rawItem of rawItems) {
+      try {
+        const contentHash = require('crypto').createHash('md5')
+          .update(`${rawItem.title}${rawItem.url}`)
+          .digest('hex');
+        
+        const { scored_item } = scorer.scoreContent(rawItem, 'brave-search-deep-dive');
+        
+        const contentItem = {
+          source: 'brave-search-deep-dive',
+          source_url: rawItem.url,
+          title: rawItem.title,
+          url: rawItem.url,
+          content_hash: contentHash,
+          snippet: rawItem.snippet || rawItem.full_content?.substring(0, 300) + '...' || '',
+          full_content: rawItem.full_content || rawItem.snippet || '',
+          author: rawItem.author || 'Unknown',
+          published_at: rawItem.published_at || new Date(),
+          categories: rawItem.categories || [],
+          language: 'en',
+          
+          // Scores
+          domain_authority: scored_item.domain_authority,
+          indian_context_score: scored_item.indian_context_score,
+          freshness_score: scored_item.freshness_score,
+          extractability_score: scored_item.extractability_score,
+          composite_score: scored_item.composite_score,
+          
+          // Features
+          has_statistics: scored_item.has_statistics,
+          has_dates: scored_item.has_dates,
+          has_numbers: scored_item.has_numbers,
+          word_count: scored_item.word_count
+        };
+        
+        scoredItems.push(contentItem);
+      } catch (error) {
+        console.error(`Failed to process item: ${rawItem.title}`, error);
+      }
+    }
+    
+    console.log(`📈 Successfully processed ${scoredItems.length} items for deep dive analysis`);
+    
+    // Generate enhanced report with live data
+    const reportResult = await reportGenerator.generateReport(
+      validatedData.topic,
+      scoredItems.length,  // Use actual collected items
+      validatedData.time_range_days
+    );
+    
+    if (!reportResult.success) {
+      return res.status(500).json({
+        success: false,
+        error: reportResult.error || 'Failed to generate deep dive PDF report'
+      });
+    }
+
+    res.json({
+      success: true,
+      report_id: reportResult.report!.id,
+      status: 'completed',
+      live_sources_collected: scoredItems.length,
+      report: {
+        id: reportResult.report!.id,
+        title: reportResult.report!.title,
+        topic: reportResult.report!.topic,
+        word_count: reportResult.report!.word_count,
+        source_count: reportResult.report!.source_count,
+        citation_count: reportResult.report!.citation_count,
+        confidence_score: reportResult.report!.confidence_score,
+        created_at: reportResult.report!.created_at,
+        pdf_url: reportResult.report!.pdf_path ? `/api/reports/${reportResult.report!.id}/pdf` : undefined,
+        report_type: 'deep-dive-pdf'
+      }
+    });
+    
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid request parameters',
+        details: error.errors
+      });
+    }
+    
+    console.error('Error generating deep dive PDF report:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to generate deep dive PDF report' 
+    });
+  }
+});
+
 // Get report by ID
 app.get('/api/reports/:id', async (req, res) => {
   try {
@@ -653,13 +799,14 @@ app.use((req, res) => {
 app.listen(port, () => {
   console.log(`🚀 HR Research Platform API running on port ${port}`);
   console.log(`📚 Available endpoints:`);
-  console.log(`   GET  /health                      - Health check`);
-  console.log(`   GET  /api/content                 - List content items`);
-  console.log(`   GET  /api/content/search          - Search content`);
-  console.log(`   POST /api/reports/generate        - Generate report`);
-  console.log(`   GET  /api/reports/:id             - Get report by ID`);
-  console.log(`   GET  /api/reports/:id/pdf         - Download report PDF`);
-  console.log(`   GET  /api/stats/collection        - Collection statistics`);
+  console.log(`   GET  /health                           - Health check`);
+  console.log(`   GET  /api/content                      - List content items`);
+  console.log(`   GET  /api/content/search               - Search content`);
+  console.log(`   POST /api/reports/generate             - Generate content report`);
+  console.log(`   POST /api/reports/generate-pdf-deep-dive - Generate deep dive PDF (live search)`);
+  console.log(`   GET  /api/reports/:id                  - Get report by ID`);
+  console.log(`   GET  /api/reports/:id/pdf              - Download report PDF`);
+  console.log(`   GET  /api/stats/collection             - Collection statistics`);
   console.log(``);
   console.log(`📖 Example requests:`);
   console.log(`   curl http://localhost:${port}/health`);

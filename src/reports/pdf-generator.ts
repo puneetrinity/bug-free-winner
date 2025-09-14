@@ -11,7 +11,7 @@ interface CitationData {
 }
 
 interface ChartData {
-  type: 'bar' | 'pie' | 'line';
+  type: 'bar' | 'pie' | 'line' | 'doughnut';
   title: string;
   data: any;
 }
@@ -201,76 +201,105 @@ export class PDFGenerator {
   private generateChartsData(sources: ContentItem[]): ChartData[] {
     const charts: ChartData[] = [];
 
-    // Chart 1: Sources by Authority
-    const domainGroups = sources.reduce((acc, source) => {
-      const domain = source.source;
-      acc[domain] = (acc[domain] || 0) + 1;
+    // Chart 1: Content Quality Distribution
+    const qualityBands = sources.reduce((acc, source) => {
+      const score = Number(source.composite_score);
+      let band = 'Low (0.0-0.3)';
+      if (score >= 0.7) band = 'High (0.7-1.0)';
+      else if (score >= 0.5) band = 'Medium (0.5-0.7)';
+      else if (score >= 0.3) band = 'Fair (0.3-0.5)';
+      
+      acc[band] = (acc[band] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     charts.push({
-      type: 'pie',
-      title: 'Content Sources Distribution',
+      type: 'doughnut',
+      title: 'Content Quality Distribution',
       data: {
-        labels: Object.keys(domainGroups),
+        labels: Object.keys(qualityBands),
         datasets: [{
-          data: Object.values(domainGroups),
-          backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
+          data: Object.values(qualityBands),
+          backgroundColor: ['#10B981', '#F59E0B', '#EF4444', '#6B7280'],
+          borderWidth: 2,
+          borderColor: '#fff'
         }]
       }
     });
 
-    // Chart 2: Quality Score Distribution
-    const scoreRanges = sources.reduce((acc, source) => {
-      const score = Number(source.composite_score);
-      if (score >= 0.8) acc['High (0.8-1.0)']++;
-      else if (score >= 0.6) acc['Medium (0.6-0.8)']++;
-      else if (score >= 0.4) acc['Low (0.4-0.6)']++;
-      else acc['Poor (0.0-0.4)']++;
-      return acc;
-    }, { 'High (0.8-1.0)': 0, 'Medium (0.6-0.8)': 0, 'Low (0.4-0.6)': 0, 'Poor (0.0-0.4)': 0 });
-
+    // Chart 2: Indian Context Relevance
+    const contextScores = sources.map(s => Number(s.indian_context_score)).sort((a, b) => b - a);
+    const contextLabels = sources.map((_, i) => `Source ${i + 1}`);
+    
     charts.push({
       type: 'bar',
-      title: 'Source Quality Distribution',
+      title: 'Indian Context Relevance by Source',
       data: {
-        labels: Object.keys(scoreRanges),
+        labels: contextLabels.slice(0, 10), // Top 10 sources
         datasets: [{
-          label: 'Number of Sources',
-          data: Object.values(scoreRanges),
-          backgroundColor: '#36A2EB',
-          borderColor: '#36A2EB',
+          label: 'Indian Context Score',
+          data: contextScores.slice(0, 10),
+          backgroundColor: '#3B82F6',
+          borderColor: '#1D4ED8',
           borderWidth: 1
         }]
       }
     });
 
-    // Chart 3: Publication Timeline (if we have dates)
-    const sourcesWithDates = sources.filter(s => s.published_at);
-    if (sourcesWithDates.length > 0) {
-      const dateGroups = sourcesWithDates.reduce((acc, source) => {
-        const date = new Date(source.published_at!).toISOString().split('T')[0];
-        acc[date] = (acc[date] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
+    // Chart 3: Content Features Analysis
+    const featureAnalysis = sources.reduce((acc, source) => {
+      if (source.has_statistics) acc.statistics = (acc.statistics || 0) + 1;
+      if (source.has_dates) acc.dates = (acc.dates || 0) + 1;
+      if (source.has_numbers) acc.numbers = (acc.numbers || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
 
-      const sortedDates = Object.keys(dateGroups).sort();
+    charts.push({
+      type: 'bar',
+      title: 'Content Features Analysis',
+      data: {
+        labels: ['Statistics', 'Dates', 'Numbers'],
+        datasets: [{
+          label: 'Sources with Feature',
+          data: [
+            featureAnalysis.statistics || 0,
+            featureAnalysis.dates || 0,
+            featureAnalysis.numbers || 0
+          ],
+          backgroundColor: ['#10B981', '#F59E0B', '#8B5CF6'],
+          borderWidth: 1
+        }]
+      }
+    });
+
+    // Chart 4: Content Length Distribution (Word Count)
+    const wordCounts = sources.map(s => s.word_count).filter(wc => wc > 0);
+    const avgWordCount = wordCounts.reduce((sum, count) => sum + count, 0) / wordCounts.length;
+    const wordCountBands = sources.reduce((acc, source) => {
+      const words = source.word_count;
+      let band = 'Very Short (<100)';
+      if (words >= 1000) band = 'Very Long (1000+)';
+      else if (words >= 500) band = 'Long (500-1000)';
+      else if (words >= 200) band = 'Medium (200-500)';
+      else if (words >= 100) band = 'Short (100-200)';
       
-      charts.push({
-        type: 'line',
-        title: 'Publication Timeline',
-        data: {
-          labels: sortedDates,
-          datasets: [{
-            label: 'Articles Published',
-            data: sortedDates.map(date => dateGroups[date]),
-            borderColor: '#4BC0C0',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            fill: true
-          }]
-        }
-      });
-    }
+      acc[band] = (acc[band] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    charts.push({
+      type: 'pie',
+      title: 'Content Length Distribution',
+      data: {
+        labels: Object.keys(wordCountBands),
+        datasets: [{
+          data: Object.values(wordCountBands),
+          backgroundColor: ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6'],
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      }
+    });
 
     return charts;
   }
@@ -422,22 +451,43 @@ export class PDFGenerator {
     return `
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
+        @page { 
+            size: A4; 
+            margin: 2cm 2cm 2cm 2cm;
+            @top-center { content: "HR Research Deep Dive Report"; }
+            @bottom-center { content: "Page " counter(page) " of " counter(pages); }
+        }
+        
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
             color: #333;
             font-size: 11pt;
+            background: white;
         }
         
-        .report-container { max-width: 100%; }
+        .report-container { 
+            max-width: 100%; 
+            background: white;
+        }
+        
+        .page-break { 
+            page-break-before: always; 
+            break-before: page;
+        }
         
         .title-page {
-            height: 100vh;
+            height: 90vh;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             text-align: center;
-            padding: 2cm;
+            padding: 4cm 2cm;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            margin: -2cm;
+            padding-top: 6cm;
         }
         
         .title-header {
@@ -448,7 +498,7 @@ export class PDFGenerator {
         }
         
         .report-title {
-            font-size: 28pt;
+            font-size: 36pt;
             font-weight: bold;
             color: #2c5aa0;
             margin-bottom: 20px;
