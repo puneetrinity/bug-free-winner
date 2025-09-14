@@ -428,11 +428,11 @@ app.post('/api/admin/collect', async (req, res) => {
       });
     }
 
-    console.log('🐝🔍 Initializing Brave + ScrapingBee collector...');
-    const collector = new BraveScrapingBeeCollector(braveKey, scrapingBeeKey);
+    // Get search queries from request body or use defaults
+    const requestQueries = req.body.queries;
+    const maxPerQuery = req.body.maxPerQuery || 3;
     
-    // Collect content for common HR topics
-    const searchQueries = [
+    const searchQueries = requestQueries && requestQueries.length > 0 ? requestQueries : [
       'employee attrition trends India 2024',
       'employee retention strategies India',
       'remote work policies Indian companies',
@@ -440,12 +440,18 @@ app.post('/api/admin/collect', async (req, res) => {
       'workplace culture India'
     ];
     
+    console.log(`🔍 Using search queries:`, searchQueries);
+    
+    // Initialize the Brave + ScrapingBee collector
+    console.log('🐝🔍 Initializing Brave + ScrapingBee collector...');
+    const collector = new BraveScrapingBeeCollector(braveKey, scrapingBeeKey);
+    
     const results: any[] = [];
     let totalCollected = 0;
     
     try {
       console.log(`🔍 Collecting content for ${searchQueries.length} queries...`);
-      const rawItems = await collector.collectHRContent(searchQueries, 5);
+      const rawItems = await collector.collectHRContent(searchQueries, maxPerQuery);
       
       if (rawItems.length === 0) {
         results.push({ message: 'No raw content collected', collected: 0 });

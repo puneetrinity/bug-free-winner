@@ -37,13 +37,19 @@ export class ContentScorer {
     const freshness = this.calculateFreshness(item.published_at);
     const extractability = this.calculateExtractability(content);
     
-    // Calculate composite score
-    const composite_score = (
+    // Calculate composite score with penalty for web search results
+    let composite_score = (
       0.4 * domain_authority +
       0.3 * indian_context + 
       0.2 * freshness +
       0.1 * extractability
     );
+    
+    // Apply penalty for web search results (lower score)
+    if ((item as any).web_search_result) {
+      composite_score *= 0.7; // 30% penalty for web search results
+      console.log(`🔽 Applied web search penalty to: ${item.title.substring(0, 30)}...`);
+    }
 
     const components: ScoringComponents = {
       domain_authority,

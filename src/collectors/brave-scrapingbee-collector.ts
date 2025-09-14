@@ -36,19 +36,30 @@ export class BraveScrapingBeeCollector {
       console.log(`🎯 Searching for: "${query}"`);
       
       try {
-        // Step 1: Get search results from Brave
-        const searchResults = await this.braveSearch(query, maxResultsPerQuery);
-        console.log(`📊 Found ${searchResults.length} search results for "${query}"`);
+        // Step 1: Search trusted sites first
+        const trustedResults = await this.searchTrustedSites(query, maxResultsPerQuery);
+        console.log(`🏛️ Found ${trustedResults.length} results from trusted sites for "${query}"`);
         
-        // Step 2: Scrape full content using ScrapingBee
+        let searchResults = trustedResults;
+        let sourceType = 'trusted-site';
+        
+        // Step 2: If no results from trusted sites, search broader web with lower score
+        if (trustedResults.length === 0) {
+          console.log(`🌐 No trusted site results, searching broader web for "${query}"`);
+          searchResults = await this.braveSearch(query, maxResultsPerQuery);
+          sourceType = 'web-search';
+          console.log(`📊 Found ${searchResults.length} web results for "${query}"`);
+        }
+        
+        // Step 3: Scrape full content using ScrapingBee
         const scrapePromises = searchResults.map(result => 
-          this.scrapeSearchResult(result, query)
+          this.scrapeSearchResult(result, query, sourceType)
         );
         
         const scrapedResults = await Promise.all(scrapePromises);
         const validResults = scrapedResults.filter(result => result !== null) as RawContentItem[];
         
-        console.log(`✅ Successfully scraped ${validResults.length} articles for "${query}"`);
+        console.log(`✅ Successfully scraped ${validResults.length} articles for "${query}" from ${sourceType}`);
         allResults.push(...validResults);
         
         // Small delay between queries to be respectful
@@ -61,6 +72,46 @@ export class BraveScrapingBeeCollector {
     
     console.log(`🎉 Total collection complete: ${allResults.length} articles from ${queries.length} queries`);
     return allResults;
+  }
+
+  private async searchTrustedSites(query: string, count: number): Promise<BraveSearchResult[]> {
+    try {
+      // Search only trusted sites first
+      const trustedSites = 'site:pib.gov.in OR site:epfindia.gov.in OR site:esic.gov.in OR site:labour.gov.in OR site:peoplematters.in OR site:hrkatha.com';
+      
+      const params = {
+        q: `${query} (${trustedSites})`,
+        count: count,
+        offset: 0,
+        mkt: 'en-IN',
+        safesearch: 'moderate',
+        textDecorations: false,
+        textFormat: 'raw'
+      };
+
+      console.log(`🏛️ Searching trusted sites with query: "${params.q}"`);
+
+      const response = await axios.get(this.braveBaseUrl, {
+        headers: {
+          'X-Subscription-Token': this.braveApiKey,
+          'Accept': 'application/json',
+          'Accept-Encoding': 'gzip'
+        },
+        params,
+        timeout: 10000
+      });
+
+      if (response.data?.web?.results) {
+        const results = response.data.web.results;
+        console.log(`✅ Trusted sites returned ${results.length} results`);
+        return results;
+      }
+
+      return [];
+    } catch (error: any) {
+      console.error('❌ Trusted sites search error:', error.message);
+      return [];
+    }
   }
 
   private async braveSearch(query: string, count: number): Promise<BraveSearchResult[]> {
@@ -124,7 +175,7 @@ export class BraveScrapingBeeCollector {
     }
   }
 
-  private async scrapeSearchResult(searchResult: BraveSearchResult, originalQuery: string): Promise<RawContentItem | null> {
+  private async scrapeSearchResult(searchResult: BraveSearchResult, originalQuery: string, sourceType: string = 'trusted-site'): Promise<RawContentItem | null> {
     try {
       console.log(`🐝 Scraping: ${searchResult.title.substring(0, 50)}...`);
       
@@ -132,12 +183,18 @@ export class BraveScrapingBeeCollector {
       
       if (article) {
         // Enhance with search context
-        article.categories = [...(article.categories || []), 'brave-search'];
+        article.categories = [...(article.categories || []), sourceType === 'trusted-site' ? 'trusted-source' : 'web-search'];
         article.snippet = searchResult.description || article.snippet;
         
         // Add search metadata
         (article as any).search_query = originalQuery;
+        (article as any).source_type = sourceType;
         (article as any).search_rank = searchResult.url; // Could be position if available
+        
+        // Lower priority for web search results (will get lower composite scores)
+        if (sourceType === 'web-search') {
+          (article as any).web_search_result = true;
+        }
         
         return article;
       }
