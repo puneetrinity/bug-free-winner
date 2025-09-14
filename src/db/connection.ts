@@ -9,21 +9,64 @@ class Database {
       connectionString: process.env.DATABASE_URL,
       max: 20,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+      connectionTimeoutMillis: 60000, // Increased to 60 seconds for Railway
+      ssl: process.env.DATABASE_URL?.includes('railway') ? {
+        rejectUnauthorized: false
+      } : undefined,
+    });
+    
+    // Add pool error handling
+    this.pool.on('error', (err) => {
+      console.error('PostgreSQL pool error:', err);
+    });
+    
+    this.pool.on('connect', (client) => {
+      console.log('New PostgreSQL connection established');
     });
   }
 
   async query(text: string, params?: any[]): Promise<any> {
     const start = Date.now();
-    try {
-      const res = await this.pool.query(text, params);
-      const duration = Date.now() - start;
-      console.log('Query executed', { text: text.substring(0, 100), duration, rows: res.rowCount });
-      return res;
-    } catch (error) {
-      console.error('Database query error', { text, error });
-      throw error;
+    const maxRetries = 3;
+    let lastError;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const res = await this.pool.query(text, params);
+        const duration = Date.now() - start;
+        if (attempt > 1) {
+          console.log(`Query executed on attempt ${attempt}`, { text: text.substring(0, 100), duration, rows: res.rowCount });
+        }
+        return res;
+      } catch (error: any) {
+        lastError = error;
+        console.error(`Database query error (attempt ${attempt}/${maxRetries})`, { 
+          text: text.substring(0, 100), 
+          error: error.message,
+          code: error.code 
+        });
+        
+        // If it's a connection error, wait and retry
+        if (attempt < maxRetries && (
+          error.code === 'ECONNRESET' || 
+          error.code === 'ENOTFOUND' ||
+          error.code === 'ETIMEDOUT' ||
+          error.message?.includes('Connection terminated') ||
+          error.message?.includes('connection timeout')
+        )) {
+          const waitTime = attempt * 2000; // Progressive backoff: 2s, 4s
+          console.log(`Retrying in ${waitTime}ms...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+        
+        // For other errors or final attempt, throw immediately
+        break;
+      }
     }
+    
+    console.error('Database query failed after all retries', { text: text.substring(0, 100), error: lastError });
+    throw lastError;
   }
 
   async getClient(): Promise<PoolClient> {
