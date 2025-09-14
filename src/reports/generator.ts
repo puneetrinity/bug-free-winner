@@ -185,45 +185,35 @@ export class ReportGenerator {
       new Date(source.published_at || source.collected_at) > cutoffDate
     );
     
-    // Filter out irrelevant government/regulatory content unless specifically relevant to the topic
-    if (!topic.toLowerCase().includes('epfo') && !topic.toLowerCase().includes('regulation')) {
-      sources = sources.filter(source => {
-        const contentText = (source.title + ' ' + (source.snippet || '') + ' ' + (source.full_content || '')).toLowerCase();
-        
-        // Exclude EPFO technical/service announcements that aren't HR-related
-        const isEPFOServiceContent = (
-          contentText.includes('epfo') && (
-            contentText.includes('service disruption') ||
-            contentText.includes('technical upgrade') ||
-            contentText.includes('intermittent disruption') ||
-            contentText.includes('claim filing') ||
-            contentText.includes('website maintenance')
-          ) && !(
-            contentText.includes('attrition') ||
-            contentText.includes('employee turnover') ||
-            contentText.includes('job change') ||
-            contentText.includes('resignation') ||
-            contentText.includes('talent retention')
-          )
-        );
-        
-        // Exclude generic government announcements
-        const isGenericGovContent = (
-          source.url.includes('pib.gov.in') ||
-          source.url.includes('epfindia.gov.in')
-        ) && !(
-          contentText.includes('attrition') ||
-          contentText.includes('employee') ||
-          contentText.includes('hr') ||
-          contentText.includes('recruitment') ||
-          contentText.includes('talent')
-        );
-        
-        return !isEPFOServiceContent && !isGenericGovContent;
-      });
+    // Filter out specific irrelevant content patterns
+    sources = sources.filter(source => {
+      const contentText = (source.title + ' ' + (source.snippet || '') + ' ' + (source.full_content || '')).toLowerCase();
       
-      console.log(`🔍 After filtering irrelevant content: ${sources.length} sources remaining`);
-    }
+      // Only exclude very specific EPFO service announcements that are clearly technical
+      const isIrrelevantEPFOContent = (
+        contentText.includes('epfo') && 
+        (contentText.includes('service disruption') || contentText.includes('intermittent disruption')) &&
+        (contentText.includes('technical upgrade') || contentText.includes('website maintenance')) &&
+        !contentText.includes('attrition') &&
+        !contentText.includes('employee') &&
+        !contentText.includes('turnover') &&
+        !contentText.includes('resignation') &&
+        !contentText.includes('job') &&
+        !contentText.includes('talent') &&
+        !contentText.includes('hr') &&
+        !contentText.includes('recruitment') &&
+        !contentText.includes('workplace')
+      );
+      
+      if (isIrrelevantEPFOContent) {
+        console.log(`🗑️  Filtered out EPFO service content: ${source.title.substring(0, 60)}...`);
+        return false;
+      }
+      
+      return true;
+    });
+    
+    console.log(`🔍 After filtering irrelevant content: ${sources.length} sources remaining`);
 
     // Prioritize high-quality sources
     sources = sources
