@@ -380,7 +380,7 @@ app.post('/api/admin/test-db', async (req, res) => {
   }
 });
 
-// Database migration endpoint (protected by simple auth)
+// Simple database migration endpoint
 app.post('/api/admin/migrate', async (req, res) => {
   try {
     // Simple auth check - in production, use proper auth
@@ -392,17 +392,41 @@ app.post('/api/admin/migrate', async (req, res) => {
       });
     }
 
-    console.log('🗄️ Running database migration...');
+    console.log('🗄️ Running simple database migration...');
     
-    // Import migration script
-    const { DatabaseMigrator } = await import('./scripts/migrate');
-    const migrator = new DatabaseMigrator();
+    // Read schema file directly and execute
+    const fs = await import('fs');
+    const path = await import('path');
     
-    await migrator.migrate();
+    const schemaPath = path.join(__dirname, 'db', 'schema.sql');
+    const schema = fs.readFileSync(schemaPath, 'utf-8');
+    
+    // Split schema into statements
+    const statements = schema
+      .split(';')
+      .map(s => s.trim())
+      .filter(s => s.length > 0 && !s.startsWith('--'));
+
+    console.log(`🔨 Executing ${statements.length} SQL statements...`);
+
+    for (let i = 0; i < statements.length; i++) {
+      const statement = statements[i];
+      try {
+        await db.query(statement + ';');
+        console.log(`  ✅ ${i + 1}/${statements.length}: ${statement.substring(0, 50)}...`);
+      } catch (error: any) {
+        // Ignore "already exists" errors
+        if (error.message.includes('already exists')) {
+          console.log(`  ⚠️  ${i + 1}/${statements.length}: ${statement.substring(0, 50)}... (already exists)`);
+        } else {
+          throw error;
+        }
+      }
+    }
     
     res.json({ 
       success: true, 
-      message: 'Database migration completed successfully' 
+      message: `Database migration completed successfully! Created ${statements.length} objects.` 
     });
   } catch (error: any) {
     console.error('Migration failed:', error);
