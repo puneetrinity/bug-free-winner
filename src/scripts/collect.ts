@@ -3,6 +3,7 @@
 import { PIBScraper } from '../scrapers/pib-scraper';
 import { RSSParser } from '../scrapers/rss-parser';
 import { ContentScorer } from '../scoring/content-scorer';
+import { BraveScrapingBeeCollector, HR_SEARCH_QUERIES } from '../collectors/brave-scrapingbee-collector';
 import db from '../db/connection';
 import { RawContentItem } from '../types';
 import { RSS_SOURCES, getTier1Sources, RSSSource } from '../config/rss-sources';
@@ -20,11 +21,24 @@ class ContentCollector {
   private pibScraper: PIBScraper;
   private rssParser: RSSParser;
   private scorer: ContentScorer;
+  private braveCollector: BraveScrapingBeeCollector | null = null;
 
   constructor() {
-    this.pibScraper = new PIBScraper();
+    const scrapingBeeKey = process.env.SCRAPINGBEE_API_KEY;
+    const braveKey = process.env.BRAVE_API_KEY;
+    
+    // Initialize PIB scraper with ScrapingBee if available
+    this.pibScraper = new PIBScraper(scrapingBeeKey);
     this.rssParser = new RSSParser();
     this.scorer = new ContentScorer();
+    
+    // Initialize Brave + ScrapingBee collector if both APIs available
+    if (braveKey && scrapingBeeKey) {
+      this.braveCollector = new BraveScrapingBeeCollector(braveKey, scrapingBeeKey);
+      console.log('🐝🔍 Brave Search + ScrapingBee collector initialized');
+    } else {
+      console.log('⚠️ Brave Search or ScrapingBee API key missing - web search collection disabled');
+    }
   }
 
   async collectAll(): Promise<CollectionResult[]> {
@@ -40,6 +54,11 @@ class ContentCollector {
     
     for (const source of tier1Sources) {
       results.push(await this.collectFromRSSSource(source));
+    }
+    
+    // Collect from Brave Search + ScrapingBee (if available)
+    if (this.braveCollector) {
+      results.push(await this.collectFromBraveSearch());
     }
 
     console.log('\n📊 Collection Summary:');
@@ -170,6 +189,50 @@ class ContentCollector {
     console.log(`✅ ${source}: Successfully processed ${processed}/${rawItems.length} items (avg score: ${avgScore.toFixed(3)})`);
     
     return { processed, avgScore };
+  }
+
+  private async collectFromBraveSearch(): Promise<CollectionResult> {
+    const startTime = Date.now();
+    console.log('🔍🐝 Collecting from Brave Search + ScrapingBee...');
+    
+    let rawItems: RawContentItem[] = [];
+    let errors = 0;
+
+    if (!this.braveCollector) {
+      return {
+        source: 'BraveSearch',
+        collected: 0,
+        processed: 0,
+        errors: 1,
+        avgScore: 0,
+        duration: Date.now() - startTime
+      };
+    }
+
+    try {
+      // Use a subset of queries to avoid hitting API limits
+      const selectedQueries = HR_SEARCH_QUERIES.slice(0, 5); // First 5 queries
+      console.log(`🎯 Running ${selectedQueries.length} search queries...`);
+      
+      rawItems = await this.braveCollector.collectHRContent(selectedQueries, 3); // 3 results per query
+      console.log(`✅ Brave Search collected ${rawItems.length} articles`);
+      
+    } catch (error: any) {
+      console.error('❌ Brave Search collection failed:', error.message);
+      errors++;
+    }
+
+    const { processed, avgScore } = await this.processAndStore(rawItems, 'brave_search');
+    const duration = Date.now() - startTime;
+
+    return {
+      source: 'BraveSearch',
+      collected: rawItems.length,
+      processed,
+      errors,
+      avgScore,
+      duration
+    };
   }
 
   async getRecentStats(days = 7): Promise<void> {

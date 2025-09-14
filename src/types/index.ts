@@ -79,6 +79,7 @@ export interface RawContentItem {
   url: string;
   content?: string;
   snippet?: string;
+  full_content?: string;
   author?: string;
   published_at?: Date;
   categories?: string[];

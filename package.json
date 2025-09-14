@@ -31,6 +31,7 @@
     "groq-sdk": "^0.32.0",
     "pg": "^8.11.3",
     "puppeteer": "^21.6.1",
+    "scrapingbee": "^1.7.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
     "tsx": "^4.6.2",

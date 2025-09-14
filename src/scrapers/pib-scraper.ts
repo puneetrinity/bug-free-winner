@@ -1,32 +1,59 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { RawContentItem } from '../types';
+import { ScrapingBeeScraper } from './scrapingbee-scraper';
 
 export class PIBScraper {
   private baseUrl = 'https://pib.gov.in';
   private labourMinistryUrl = 'https://pib.gov.in/PressRelease.aspx?MinId=7';
+  private scrapingBee: ScrapingBeeScraper | null = null;
   
-  constructor() {}
+  constructor(scrapingBeeApiKey?: string) {
+    if (scrapingBeeApiKey) {
+      this.scrapingBee = new ScrapingBeeScraper(scrapingBeeApiKey);
+      console.log('🐝 PIB Scraper initialized with ScrapingBee');
+    } else {
+      console.log('⚠️ PIB Scraper initialized without ScrapingBee (direct scraping only)');
+    }
+  }
 
   async scrape(): Promise<RawContentItem[]> {
     const startTime = Date.now();
     console.log('🔍 Starting PIB Labour Ministry scraping...');
     
     try {
-      // Get the main page with press releases
-      const response = await axios.get(this.labourMinistryUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
-          'Accept-Encoding': 'gzip, deflate, br',
-          'Connection': 'keep-alive',
-          'Upgrade-Insecure-Requests': '1'
-        },
-        timeout: 15000
-      });
+      let htmlContent: string;
+      
+      // Use ScrapingBee if available, otherwise fallback to direct scraping
+      if (this.scrapingBee) {
+        console.log('🐝 Using ScrapingBee for PIB scraping...');
+        htmlContent = await this.scrapingBee.scrapeUrl(this.labourMinistryUrl, {
+          render_js: false,
+          wait: 2000,
+          country_code: 'IN'
+        });
+      } else {
+        console.log('🔄 Using direct scraping for PIB...');
+        const response = await axios.get(this.labourMinistryUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+          },
+          timeout: 15000
+        });
+        htmlContent = response.data;
+      }
 
-      const $ = cheerio.load(response.data);
+      if (!htmlContent) {
+        console.error('❌ No HTML content received from PIB');
+        return [];
+      }
+
+      const $ = cheerio.load(htmlContent);
       const items: RawContentItem[] = [];
 
       console.log('📄 Parsing PIB press releases...');
@@ -148,14 +175,26 @@ export class PIBScraper {
 
   async fetchFullContent(url: string): Promise<string> {
     try {
-      const response = await axios.get(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        },
-        timeout: 10000
-      });
+      let htmlContent: string;
+      
+      // Use ScrapingBee if available for full content fetching too
+      if (this.scrapingBee) {
+        htmlContent = await this.scrapingBee.scrapeUrl(url, {
+          render_js: false,
+          wait: 1000,
+          country_code: 'IN'
+        });
+      } else {
+        const response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          },
+          timeout: 10000
+        });
+        htmlContent = response.data;
+      }
 
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(htmlContent);
       
       // Remove unwanted elements
       $('script, style, nav, footer, .advertisement, .ads').remove();
