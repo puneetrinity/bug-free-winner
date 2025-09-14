@@ -24,6 +24,40 @@ const GenerateReportSchema = z.object({
 // Initialize report generator
 const reportGenerator = new ReportGenerator();
 
+// Root endpoint - API documentation
+app.get('/', (req, res) => {
+  res.json({
+    service: 'HR Research Platform API',
+    version: '1.0.0',
+    status: 'online',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: 'GET /health',
+      content: {
+        list: 'GET /api/content?limit=20&min_score=0.5',
+        search: 'GET /api/content/search?q=attrition'
+      },
+      reports: {
+        generate: 'POST /api/reports/generate',
+        get: 'GET /api/reports/:id',
+        pdf: 'GET /api/reports/:id/pdf'
+      },
+      stats: 'GET /api/stats/collection?days=7'
+    },
+    example: {
+      generate_report: {
+        method: 'POST',
+        url: '/api/reports/generate',
+        body: {
+          topic: 'employee attrition in India',
+          max_sources: 10,
+          time_range_days: 30
+        }
+      }
+    }
+  });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ 
