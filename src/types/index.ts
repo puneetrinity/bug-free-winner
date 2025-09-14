@@ -2,7 +2,7 @@
 
 export interface ContentItem {
   id: string;
-  source: 'pib' | 'peoplematters' | 'hrkatha';
+  source: string;
   source_url: string;
   title: string;
   url: string;

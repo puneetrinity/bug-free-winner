@@ -482,17 +482,8 @@ app.post('/api/admin/collect', async (req, res) => {
               .update(`${rawItem.title}${rawItem.url}`)
               .digest('hex');
             
-            // Determine source based on URL domain
-            const getSourceFromUrl = (url: string): 'pib' | 'peoplematters' | 'hrkatha' => {
-              const domain = url.toLowerCase();
-              if (domain.includes('pib.gov.in')) return 'pib';
-              if (domain.includes('peoplematters.in')) return 'peoplematters';
-              if (domain.includes('hrkatha.com')) return 'hrkatha';
-              // Default to pib for government/unknown sources
-              return 'pib';
-            };
-            
-            const sourceType = getSourceFromUrl(rawItem.url);
+            // Use generic source naming for search-based collection
+            const sourceType = 'brave-search';
             
             // Score the content
             const { scored_item } = scorer.scoreContent(rawItem, sourceType);

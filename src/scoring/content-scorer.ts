@@ -3,16 +3,7 @@ import crypto from 'crypto';
 
 export class ContentScorer {
   private readonly domainScores = {
-    'pib.gov.in': 1.0,
-    'epfindia.gov.in': 1.0,
-    'esic.gov.in': 1.0,
-    'labour.gov.in': 1.0,
-    'peoplematters.in': 0.85,
-    'hrkatha.com': 0.80,
-    'economictimes.indiatimes.com': 0.80,
-    'livemint.com': 0.75,
-    'business-standard.com': 0.75,
-    'default': 0.60
+    'default': 0.70 // Give all domains a decent baseline score
   };
 
   private readonly indianKeywords = [
@@ -45,11 +36,7 @@ export class ContentScorer {
       0.1 * extractability
     );
     
-    // Apply penalty for web search results (lower score)
-    if ((item as any).web_search_result) {
-      composite_score *= 0.7; // 30% penalty for web search results
-      console.log(`🔽 Applied web search penalty to: ${item.title.substring(0, 30)}...`);
-    }
+    // No penalties - let content quality determine the score
 
     const components: ScoringComponents = {
       domain_authority,
@@ -215,13 +202,7 @@ export class ContentScorer {
   }
 
   private getSourceUrl(source: string): string {
-    const sourceUrls = {
-      'pib': 'https://pib.gov.in/PressRelease.aspx?MinId=7',
-      'peoplematters': 'https://www.peoplematters.in/',
-      'hrkatha': 'https://hrkatha.com/'
-    };
-    
-    return (sourceUrls as any)[source] || 'https://unknown-source.com';
+    return 'https://search-based-content.com'; // Generic placeholder since we're search-based now
   }
 
   // Utility method to batch score multiple items

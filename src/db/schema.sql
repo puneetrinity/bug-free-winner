@@ -8,7 +8,7 @@ CREATE TABLE content_items (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   
   -- Source info
-  source TEXT NOT NULL,              -- 'pib', 'peoplematters', 'hrkatha'
+  source TEXT NOT NULL,              -- Source identifier (e.g., 'brave-search')
   source_url TEXT NOT NULL,          -- Original source URL
   title TEXT NOT NULL,
   url TEXT UNIQUE NOT NULL,           -- Actual article URL

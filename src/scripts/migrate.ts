@@ -102,7 +102,7 @@ class DatabaseMigrator {
       },
       {
         date: new Date(Date.now() - 24 * 60 * 60 * 1000),
-        source: 'peoplematters',
+        source: 'brave-search',
         items_collected: 8,
         items_processed: 8,
         avg_quality_score: 0.65,
@@ -111,7 +111,7 @@ class DatabaseMigrator {
       },
       {
         date: new Date(),
-        source: 'hrkatha',
+        source: 'brave-search',
         items_collected: 6,
         items_processed: 5,
         avg_quality_score: 0.72,

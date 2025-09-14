@@ -221,14 +221,7 @@ export class ScrapingBeeScraper {
 
   private categorizeContent(url: string, text: string): string[] {
     const categories: string[] = [];
-    const lowerUrl = url.toLowerCase();
     const lowerText = text.toLowerCase();
-
-    // URL-based categorization
-    if (lowerUrl.includes('pib.gov.in')) categories.push('government');
-    if (lowerUrl.includes('peoplematters')) categories.push('hr-media');
-    if (lowerUrl.includes('hrkatha')) categories.push('hr-media');
-    if (lowerUrl.includes('economictimes')) categories.push('business-media');
 
     // Content-based categorization
     if (lowerText.includes('recruitment') || lowerText.includes('hiring')) categories.push('recruitment');

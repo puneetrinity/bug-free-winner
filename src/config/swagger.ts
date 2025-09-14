@@ -27,7 +27,7 @@ const swaggerDefinition = {
         type: 'object',
         properties: {
           id: { type: 'string', format: 'uuid' },
-          source: { type: 'string', enum: ['pib', 'peoplematters', 'hrkatha'] },
+          source: { type: 'string' },
           title: { type: 'string' },
           url: { type: 'string', format: 'uri' },
           snippet: { type: 'string' },
