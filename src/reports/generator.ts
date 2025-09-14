@@ -204,7 +204,7 @@ export class ReportGenerator {
       `URL: ${source.url}\n` +
       `Published: ${source.published_at?.toISOString().split('T')[0] || 'Unknown'}\n` +
       `Content: ${(source.full_content || source.snippet || '').substring(0, 1000)}\n` +
-      `---`
+      '---'
     ).join('\n');
 
     const messages: GroqMessage[] = [
@@ -469,29 +469,29 @@ Note: This analysis is based on ${sourceCount} recent sources from the Indian HR
     
     // Add sections
     sections.forEach(section => {
-      html += `<section>`;
+      html += '<section>';
       html += `<h2>${section.title}</h2>`;
       html += `<div class="content">${section.content.replace(/\n/g, '<br>')}</div>`;
-      html += `</section>`;
+      html += '</section>';
     });
     
     // Add bibliography
     if (sources.length > 0) {
-      html += `<section class="bibliography">`;
-      html += `<h2>Sources</h2>`;
-      html += `<ol>`;
+      html += '<section class="bibliography">';
+      html += '<h2>Sources</h2>';
+      html += '<ol>';
       
       sources.forEach((source, index) => {
-        html += `<li>`;
+        html += '<li>';
         html += `<strong>${source.title}</strong><br>`;
         html += `<a href="${source.url}" target="_blank">${source.url}</a><br>`;
         html += `Published: ${source.published_at?.toISOString().split('T')[0] || 'Unknown'}<br>`;
         html += `Source: ${source.source}<br>`;
-        html += `</li>`;
+        html += '</li>';
       });
       
-      html += `</ol>`;
-      html += `</section>`;
+      html += '</ol>';
+      html += '</section>';
     }
     
     html += '</div>';

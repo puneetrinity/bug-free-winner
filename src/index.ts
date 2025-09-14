@@ -607,7 +607,7 @@ app.post('/api/admin/collect', async (req, res) => {
       'workplace culture India'
     ];
     
-    console.log(`🔍 Using search queries:`, searchQueries);
+    console.log('🔍 Using search queries:', searchQueries);
     
     // Initialize the Brave + ScrapingBee collector
     console.log('🐝🔍 Initializing Brave + ScrapingBee collector...');
@@ -690,7 +690,7 @@ app.post('/api/admin/collect', async (req, res) => {
         totalCollected += processedCount;
       }
     } catch (error: any) {
-      console.error(`Error during collection:`, error.message);
+      console.error('Error during collection:', error.message);
       results.push({ error: error.message });
     }
     
@@ -812,23 +812,23 @@ app.listen(port, () => {
   
   // Log API key availability
   const braveKey = process.env.BRAVE_API_KEY || process.env.BRAVE_SEARCH_API_KEY;
-  console.log(`🔑 API Keys Status:`, {
+  console.log('🔑 API Keys Status:', {
     BRAVE: braveKey ? `✅ Configured (${braveKey.substring(0, 8)}...)` : '❌ Not configured',
     SCRAPINGBEE: process.env.SCRAPINGBEE_API_KEY ? `✅ Configured (${process.env.SCRAPINGBEE_API_KEY.substring(0, 8)}...)` : '❌ Not configured',
-    GROQ: process.env.GROQ_API_KEY ? `✅ Configured` : '❌ Not configured'
+    GROQ: process.env.GROQ_API_KEY ? '✅ Configured' : '❌ Not configured'
   });
   
-  console.log(`📚 Available endpoints:`);
-  console.log(`   GET  /health                           - Health check`);
-  console.log(`   GET  /api/content                      - List content items`);
-  console.log(`   GET  /api/content/search               - Search content`);
-  console.log(`   POST /api/reports/generate             - Generate content report`);
-  console.log(`   POST /api/reports/generate-pdf-deep-dive - Generate deep dive PDF (live search)`);
-  console.log(`   GET  /api/reports/:id                  - Get report by ID`);
-  console.log(`   GET  /api/reports/:id/pdf              - Download report PDF`);
-  console.log(`   GET  /api/stats/collection             - Collection statistics`);
-  console.log(``);
-  console.log(`📖 Example requests:`);
+  console.log('📚 Available endpoints:');
+  console.log('   GET  /health                           - Health check');
+  console.log('   GET  /api/content                      - List content items');
+  console.log('   GET  /api/content/search               - Search content');
+  console.log('   POST /api/reports/generate             - Generate content report');
+  console.log('   POST /api/reports/generate-pdf-deep-dive - Generate deep dive PDF (live search)');
+  console.log('   GET  /api/reports/:id                  - Get report by ID');
+  console.log('   GET  /api/reports/:id/pdf              - Download report PDF');
+  console.log('   GET  /api/stats/collection             - Collection statistics');
+  console.log('');
+  console.log('📖 Example requests:');
   console.log(`   curl http://localhost:${port}/health`);
   console.log(`   curl http://localhost:${port}/api/content?limit=5&min_score=0.7`);
   console.log(`   curl -X POST http://localhost:${port}/api/reports/generate -H "Content-Type: application/json" -d '{"topic":"attrition trends in India","max_sources":10}'`);

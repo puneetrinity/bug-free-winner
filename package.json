@@ -12,7 +12,9 @@
     "db:seed": "tsx src/scripts/migrate.ts --seed",
     "collect": "tsx src/scripts/collect.ts",
     "collect:stats": "tsx src/scripts/collect.ts --stats",
-    "generate": "tsx src/scripts/generate-report.ts"
+    "generate": "tsx src/scripts/generate-report.ts",
+    "lint": "eslint 'src/**/*.ts'",
+    "lint:fix": "eslint 'src/**/*.ts' --fix"
   },
   "dependencies": {
     "@types/cors": "^2.8.17",
@@ -45,6 +47,9 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.4",
-    "@types/swagger-jsdoc": "^6.0.4"
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@typescript-eslint/eslint-plugin": "^8.39.1",
+    "@typescript-eslint/parser": "^8.39.1",
+    "eslint": "^9.33.0"
   }
 }

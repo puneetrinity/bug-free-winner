@@ -319,7 +319,7 @@ export class PDFGenerator {
         </div>`;
     });
 
-    html += `</div></div>`;
+    html += '</div></div>';
     return html;
   }
 

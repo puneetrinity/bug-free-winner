@@ -141,7 +141,7 @@ class Database {
       query += ` AND published_at >= NOW() - INTERVAL '${options.since_days} days'`;
     }
 
-    query += ` ORDER BY composite_score DESC`;
+    query += ' ORDER BY composite_score DESC';
 
     if (options.limit) {
       query += ` LIMIT $${++paramCount}`;
