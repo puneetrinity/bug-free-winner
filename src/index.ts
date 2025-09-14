@@ -439,13 +439,13 @@ app.get('/api/reports/:id/pdf', async (req, res) => {
     }
 
     // Check if PDF file exists
-    const fs = await import('fs/promises');
+    const fsPromises = await import('fs/promises');
     const path = await import('path');
     
     try {
       // Construct full path to PDF file
       const pdfPath = path.resolve(report.pdf_path);
-      await fs.access(pdfPath); // Check if file exists
+      await fsPromises.access(pdfPath); // Check if file exists
       
       // Set headers for PDF download
       res.setHeader('Content-Type', 'application/pdf');
@@ -456,7 +456,7 @@ app.get('/api/reports/:id/pdf', async (req, res) => {
       const readStream = fs.createReadStream(pdfPath);
       readStream.pipe(res);
       
-    } catch (_fileError) {
+    } catch {
       console.error('PDF file not found:', report.pdf_path);
       return res.status(404).json({
         success: false,
@@ -540,7 +540,7 @@ app.get('/api/stats/collection', async (req, res) => {
 });
 
 // Error handling middleware
-app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((error: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Unhandled error:', error);
   res.status(500).json({ 
     success: false, 
@@ -584,7 +584,6 @@ app.post('/api/admin/collect', async (req, res) => {
     }
 
     // Import and run collection
-    const { ContentScorer } = await import('./scoring/content-scorer');
     const { BraveScrapingBeeCollector } = await import('./collectors/brave-scrapingbee-collector');
     
     const scrapingBeeKey = process.env.SCRAPINGBEE_API_KEY;

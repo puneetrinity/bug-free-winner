@@ -273,8 +273,8 @@ export class PDFGenerator {
     });
 
     // Chart 4: Content Length Distribution (Word Count)
-    const wordCounts = sources.map(s => s.word_count).filter(wc => wc > 0);
-    const avgWordCount = wordCounts.reduce((sum, count) => sum + count, 0) / wordCounts.length;
+    // const wordCounts = sources.map(s => s.word_count).filter(wc => wc > 0); // Currently unused
+    // const avgWordCount = wordCounts.reduce((sum, count) => sum + count, 0) / wordCounts.length; // Currently unused
     const wordCountBands = sources.reduce((acc, source) => {
       const words = source.word_count;
       let band = 'Very Short (<100)';

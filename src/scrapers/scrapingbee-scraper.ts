@@ -2,12 +2,6 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { RawContentItem } from '../types';
 
-interface ScrapingBeeResponse {
-  data: string;
-  status: number;
-  headers: Record<string, string>;
-}
-
 interface ScrapingBeeConfig {
   url: string;
   premium_proxy?: boolean;
@@ -95,7 +89,7 @@ export class ScrapingBeeScraper {
     }
   }
 
-  async extractContent(html: string, url: string): Promise<{title: string, content: string, author?: string}> {
+  async extractContent(html: string, _url: string): Promise<{title: string, content: string, author?: string}> {
     const $ = cheerio.load(html);
     
     // Remove unwanted elements
