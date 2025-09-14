@@ -280,18 +280,30 @@ app.get('/api/reports/:id/pdf', async (req, res) => {
       });
     }
 
-    // Set headers for PDF download
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="${report.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf"`);
+    // Check if PDF file exists
+    const fs = await import('fs/promises');
+    const path = await import('path');
     
-    // In a real implementation, you'd stream the file from storage
-    // For now, return the path information
-    res.json({
-      success: true,
-      message: 'PDF generation completed',
-      pdf_path: report.pdf_path,
-      download_url: `/api/reports/${report.id}/download`
-    });
+    try {
+      // Construct full path to PDF file
+      const pdfPath = path.resolve(report.pdf_path);
+      await fs.access(pdfPath); // Check if file exists
+      
+      // Set headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${report.title.replace(/[^a-zA-Z0-9\s]/g, '_')}.pdf"`);
+      
+      // Stream the PDF file
+      const readStream = require('fs').createReadStream(pdfPath);
+      readStream.pipe(res);
+      
+    } catch (fileError) {
+      console.error('PDF file not found:', report.pdf_path);
+      return res.status(404).json({
+        success: false,
+        error: 'PDF file not found on server'
+      });
+    }
     
   } catch (error) {
     console.error('Error serving PDF:', error);
