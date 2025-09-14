@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Research Platform - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <div x-data="dashboard()" class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-blue-600 text-white shadow-lg">
+            <div class="container mx-auto px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <i class="fas fa-chart-bar text-2xl"></i>
+                        <h1 class="text-2xl font-bold">HR Research Platform</h1>
+                    </div>
+                    <div class="flex items-center space-x-6">
+                        <a href="/api-docs" target="_blank" class="hover:text-blue-200 transition-colors">
+                            <i class="fas fa-book mr-2"></i>API Docs
+                        </a>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                            <span class="text-sm">System Online</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="container mx-auto px-6 py-8">
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                            <i class="fas fa-newspaper text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-sm font-medium text-gray-500">Total Content</h3>
+                            <p class="text-2xl font-semibold text-gray-900" x-text="stats.totalContent">-</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-green-100 text-green-600">
+                            <i class="fas fa-file-pdf text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-sm font-medium text-gray-500">Reports Generated</h3>
+                            <p class="text-2xl font-semibold text-gray-900" x-text="stats.totalReports">-</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                            <i class="fas fa-clock text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-sm font-medium text-gray-500">Avg. Quality Score</h3>
+                            <p class="text-2xl font-semibold text-gray-900" x-text="stats.avgQuality">-</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                            <i class="fas fa-database text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-sm font-medium text-gray-500">Sources Active</h3>
+                            <p class="text-2xl font-semibold text-gray-900">3</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Generation -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Generate New Report -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-lg shadow">
+                        <div class="p-6 border-b">
+                            <h2 class="text-xl font-semibold text-gray-900">Generate New Report</h2>
+                            <p class="text-gray-600 mt-1">Create a comprehensive HR research report using AI analysis</p>
+                        </div>
+                        
+                        <form @submit.prevent="generateReport()" class="p-6">
+                            <div class="space-y-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Research Topic</label>
+                                    <input 
+                                        type="text" 
+                                        x-model="form.topic"
+                                        placeholder="e.g., employee attrition trends in Indian IT sector"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        required
+                                    >
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Max Sources</label>
+                                        <select x-model="form.maxSources" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                            <option value="5">5 sources</option>
+                                            <option value="10" selected>10 sources</option>
+                                            <option value="15">15 sources</option>
+                                            <option value="20">20 sources</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Time Range</label>
+                                        <select x-model="form.timeRange" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                            <option value="7">Last 7 days</option>
+                                            <option value="14">Last 2 weeks</option>
+                                            <option value="30" selected>Last 30 days</option>
+                                            <option value="60">Last 2 months</option>
+                                            <option value="90">Last 3 months</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <button 
+                                    type="submit" 
+                                    :disabled="isGenerating"
+                                    class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <span x-show="!isGenerating" class="flex items-center justify-center">
+                                        <i class="fas fa-magic mr-2"></i>
+                                        Generate Report
+                                    </span>
+                                    <span x-show="isGenerating" class="flex items-center justify-center">
+                                        <i class="fas fa-spinner fa-spin mr-2"></i>
+                                        Generating Report...
+                                    </span>
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <!-- Generation Status -->
+                        <div x-show="generationStatus" class="p-6 border-t bg-gray-50">
+                            <div class="flex items-center space-x-3">
+                                <div class="flex-shrink-0">
+                                    <div x-show="generationStatus === 'success'" class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-check text-green-600"></i>
+                                    </div>
+                                    <div x-show="generationStatus === 'error'" class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-exclamation-triangle text-red-600"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-1">
+                                    <p x-show="generationStatus === 'success'" class="text-sm font-medium text-green-800">
+                                        Report generated successfully! 
+                                        <a :href="lastReportUrl" class="text-green-600 hover:text-green-800 underline">View Report</a>
+                                    </p>
+                                    <p x-show="generationStatus === 'error'" class="text-sm font-medium text-red-800" x-text="errorMessage"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Reports -->
+                <div>
+                    <div class="bg-white rounded-lg shadow">
+                        <div class="p-6 border-b">
+                            <h3 class="text-lg font-semibold text-gray-900">Recent Reports</h3>
+                        </div>
+                        <div class="p-6">
+                            <div x-show="recentReports.length === 0" class="text-center text-gray-500 py-8">
+                                <i class="fas fa-file-alt text-4xl mb-4"></i>
+                                <p>No reports yet</p>
+                                <p class="text-sm">Generate your first report to get started</p>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <template x-for="report in recentReports" :key="report.id">
+                                    <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                                        <h4 class="font-medium text-gray-900 mb-2" x-text="report.title"></h4>
+                                        <p class="text-sm text-gray-600 mb-3" x-text="report.topic"></p>
+                                        <div class="flex items-center justify-between text-xs text-gray-500">
+                                            <div class="flex items-center space-x-4">
+                                                <span><i class="fas fa-file-alt mr-1"></i><span x-text="report.word_count"></span> words</span>
+                                                <span><i class="fas fa-quote-right mr-1"></i><span x-text="report.citation_count"></span> citations</span>
+                                            </div>
+                                            <div class="flex space-x-2">
+                                                <button @click="viewReport(report.id)" class="text-blue-600 hover:text-blue-800">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button x-show="report.pdf_url" @click="downloadPDF(report.id)" class="text-green-600 hover:text-green-800">
+                                                    <i class="fas fa-download"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Content Sources -->
+                    <div class="bg-white rounded-lg shadow mt-6">
+                        <div class="p-6 border-b">
+                            <h3 class="text-lg font-semibold text-gray-900">Content Sources</h3>
+                        </div>
+                        <div class="p-6">
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-3 h-3 bg-green-400 rounded-full"></div>
+                                        <span class="text-sm font-medium">PIB Labour Ministry</span>
+                                    </div>
+                                    <span class="text-xs text-gray-500">Official</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-3 h-3 bg-green-400 rounded-full"></div>
+                                        <span class="text-sm font-medium">PeopleMatters</span>
+                                    </div>
+                                    <span class="text-xs text-gray-500">RSS Feed</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-3 h-3 bg-green-400 rounded-full"></div>
+                                        <span class="text-sm font-medium">HRKatha</span>
+                                    </div>
+                                    <span class="text-xs text-gray-500">RSS Feed</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function dashboard() {
+            return {
+                form: {
+                    topic: '',
+                    maxSources: 10,
+                    timeRange: 30
+                },
+                stats: {
+                    totalContent: '-',
+                    totalReports: '-',
+                    avgQuality: '-'
+                },
+                recentReports: [],
+                isGenerating: false,
+                generationStatus: null,
+                errorMessage: '',
+                lastReportUrl: '',
+
+                async init() {
+                    await this.loadStats();
+                    await this.loadRecentReports();
+                },
+
+                async loadStats() {
+                    try {
+                        const response = await fetch('/api/stats/collection');
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            const totalCollected = data.by_source.reduce((sum, source) => sum + source.total_processed, 0);
+                            const avgQuality = data.by_source.reduce((sum, source) => sum + source.avg_score, 0) / data.by_source.length;
+                            
+                            this.stats.totalContent = totalCollected.toLocaleString();
+                            this.stats.avgQuality = avgQuality.toFixed(3);
+                        }
+                    } catch (error) {
+                        console.error('Failed to load stats:', error);
+                        this.stats = { totalContent: '0', totalReports: '0', avgQuality: '0.000' };
+                    }
+                },
+
+                async loadRecentReports() {
+                    // For now, we'll show placeholder since we don't have a list reports endpoint
+                    // In a real implementation, you'd fetch from /api/reports
+                    this.recentReports = [];
+                },
+
+                async generateReport() {
+                    if (!this.form.topic.trim()) {
+                        alert('Please enter a research topic');
+                        return;
+                    }
+
+                    this.isGenerating = true;
+                    this.generationStatus = null;
+
+                    try {
+                        const response = await fetch('/api/reports/generate', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                topic: this.form.topic,
+                                max_sources: parseInt(this.form.maxSources),
+                                time_range_days: parseInt(this.form.timeRange)
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.generationStatus = 'success';
+                            this.lastReportUrl = `/api/reports/${data.report_id}`;
+                            this.recentReports.unshift(data.report);
+                            this.stats.totalReports = (parseInt(this.stats.totalReports.replace(/,/g, '')) + 1).toLocaleString();
+                        } else {
+                            this.generationStatus = 'error';
+                            this.errorMessage = data.error || 'Failed to generate report';
+                        }
+                    } catch (error) {
+                        console.error('Report generation failed:', error);
+                        this.generationStatus = 'error';
+                        this.errorMessage = 'Network error. Please try again.';
+                    } finally {
+                        this.isGenerating = false;
+                    }
+                },
+
+                viewReport(reportId) {
+                    window.open(`/api/reports/${reportId}`, '_blank');
+                },
+
+                downloadPDF(reportId) {
+                    window.open(`/api/reports/${reportId}/pdf`, '_blank');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

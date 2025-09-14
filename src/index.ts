@@ -2,8 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { z } from 'zod';
+import swaggerUi from 'swagger-ui-express';
+import path from 'path';
 import db from './db/connection';
 import { ReportGenerator } from './reports/generator';
+import { swaggerSpec } from './config/swagger';
 
 dotenv.config();
 
@@ -13,6 +16,18 @@ const port = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Swagger documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'HR Research Platform API',
+  customfavIcon: '/favicon.ico',
+  customCss: `
+    .topbar-wrapper { display: none }
+    .swagger-ui .info { margin: 50px 0 }
+    .swagger-ui .info .title { color: #3b82f6 }
+  `
+}));
 
 // Request validation schemas
 const GenerateReportSchema = z.object({
@@ -24,41 +39,83 @@ const GenerateReportSchema = z.object({
 // Initialize report generator
 const reportGenerator = new ReportGenerator();
 
-// Root endpoint - API documentation
+// Root endpoint - redirect to dashboard
 app.get('/', (req, res) => {
-  res.json({
-    service: 'HR Research Platform API',
-    version: '1.0.0',
-    status: 'online',
-    timestamp: new Date().toISOString(),
-    endpoints: {
-      health: 'GET /health',
-      content: {
-        list: 'GET /api/content?limit=20&min_score=0.5',
-        search: 'GET /api/content/search?q=attrition'
+  // Check if request accepts HTML (browser) or JSON (API client)
+  const acceptsHtml = req.headers.accept && req.headers.accept.includes('text/html');
+  
+  if (acceptsHtml) {
+    res.redirect('/dashboard');
+  } else {
+    res.json({
+      service: 'HR Research Platform API',
+      version: '1.0.0',
+      status: 'online',
+      timestamp: new Date().toISOString(),
+      links: {
+        dashboard: '/dashboard',
+        api_docs: '/api-docs',
+        health: '/health'
       },
-      reports: {
-        generate: 'POST /api/reports/generate',
-        get: 'GET /api/reports/:id',
-        pdf: 'GET /api/reports/:id/pdf'
+      endpoints: {
+        health: 'GET /health',
+        content: {
+          list: 'GET /api/content?limit=20&min_score=0.5',
+          search: 'GET /api/content/search?q=attrition'
+        },
+        reports: {
+          generate: 'POST /api/reports/generate',
+          get: 'GET /api/reports/:id',
+          pdf: 'GET /api/reports/:id/pdf'
+        },
+        stats: 'GET /api/stats/collection?days=7'
       },
-      stats: 'GET /api/stats/collection?days=7'
-    },
-    example: {
-      generate_report: {
-        method: 'POST',
-        url: '/api/reports/generate',
-        body: {
-          topic: 'employee attrition in India',
-          max_sources: 10,
-          time_range_days: 30
+      example: {
+        generate_report: {
+          method: 'POST',
+          url: '/api/reports/generate',
+          body: {
+            topic: 'employee attrition in India',
+            max_sources: 10,
+            time_range_days: 30
+          }
         }
       }
-    }
-  });
+    });
+  }
 });
 
-// Health check endpoint
+// Dashboard UI route
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+// Health check endpoint  
+/**
+ * @openapi
+ * /health:
+ *   get:
+ *     summary: Health check endpoint
+ *     description: Returns the health status of the API
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: Service is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: healthy
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                 service:
+ *                   type: string
+ *                   example: HR Research Platform
+ */
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'healthy', 
