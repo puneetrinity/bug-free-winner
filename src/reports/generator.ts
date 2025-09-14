@@ -185,35 +185,8 @@ export class ReportGenerator {
       new Date(source.published_at || source.collected_at) > cutoffDate
     );
     
-    // Filter out specific irrelevant content patterns
-    sources = sources.filter(source => {
-      const contentText = (source.title + ' ' + (source.snippet || '') + ' ' + (source.full_content || '')).toLowerCase();
-      
-      // Only exclude very specific EPFO service announcements that are clearly technical
-      const isIrrelevantEPFOContent = (
-        contentText.includes('epfo') && 
-        (contentText.includes('service disruption') || contentText.includes('intermittent disruption')) &&
-        (contentText.includes('technical upgrade') || contentText.includes('website maintenance')) &&
-        !contentText.includes('attrition') &&
-        !contentText.includes('employee') &&
-        !contentText.includes('turnover') &&
-        !contentText.includes('resignation') &&
-        !contentText.includes('job') &&
-        !contentText.includes('talent') &&
-        !contentText.includes('hr') &&
-        !contentText.includes('recruitment') &&
-        !contentText.includes('workplace')
-      );
-      
-      if (isIrrelevantEPFOContent) {
-        console.log(`🗑️  Filtered out EPFO service content: ${source.title.substring(0, 60)}...`);
-        return false;
-      }
-      
-      return true;
-    });
-    
-    console.log(`🔍 After filtering irrelevant content: ${sources.length} sources remaining`);
+    // Use all sources from Brave Search + ScrapingBee without content filtering
+    console.log(`🔍 Using all ${sources.length} sources from search without filtering`);
 
     // Prioritize high-quality sources
     sources = sources
