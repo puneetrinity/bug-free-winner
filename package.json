@@ -5,9 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && cp -r src/db/schema.sql dist/db/ && cp -r src/public dist/",
     "start": "node dist/index.js",
-    "postbuild": "node dist/scripts/migrate.js",
     "db:migrate": "tsx src/scripts/migrate.ts",
     "db:reset": "tsx src/scripts/migrate.ts --reset",
     "db:seed": "tsx src/scripts/migrate.ts --seed",

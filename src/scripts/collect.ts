@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 import { PIBScraper } from '../scrapers/pib-scraper';
-import { RSSParser, RSS_FEEDS } from '../scrapers/rss-parser';
+import { RSSParser } from '../scrapers/rss-parser';
 import { ContentScorer } from '../scoring/content-scorer';
 import db from '../db/connection';
 import { RawContentItem } from '../types';
+import { RSS_SOURCES, getTier1Sources, RSSSource } from '../config/rss-sources';
 
 interface CollectionResult {
   source: string;
@@ -33,9 +34,13 @@ class ContentCollector {
     // Collect from PIB Labour Ministry
     results.push(await this.collectFromPIB());
     
-    // Collect from RSS feeds
-    results.push(await this.collectFromPeopleMatters());
-    results.push(await this.collectFromHRKatha());
+    // Collect from Tier 1 RSS feeds (verified working)
+    const tier1Sources = getTier1Sources();
+    console.log(`📡 Found ${tier1Sources.length} Tier 1 RSS sources to process\n`);
+    
+    for (const source of tier1Sources) {
+      results.push(await this.collectFromRSSSource(source));
+    }
 
     console.log('\n📊 Collection Summary:');
     console.log('='.repeat(60));
@@ -100,70 +105,33 @@ class ContentCollector {
     };
   }
 
-  private async collectFromPeopleMatters(): Promise<CollectionResult> {
+  private async collectFromRSSSource(rssSource: RSSSource): Promise<CollectionResult> {
     const startTime = Date.now();
-    console.log('👥 Collecting from PeopleMatters...');
+    console.log(`📡 Collecting from ${rssSource.name}...`);
     
     let rawItems: RawContentItem[] = [];
     let errors = 0;
 
-    // Try multiple RSS URLs for PeopleMatters
-    for (const url of RSS_FEEDS.peoplematters.urls) {
-      try {
-        console.log(`📡 Trying RSS feed: ${url}`);
-        const items = await this.rssParser.parseRSSFeed(url, 'peoplematters');
-        if (items.length > 0) {
-          rawItems = items;
-          console.log(`✅ Successfully got ${items.length} items from ${url}`);
-          break;
-        }
-      } catch (error) {
-        console.warn(`⚠️  Failed to parse ${url}:`, error.message);
-        errors++;
+    try {
+      const items = await this.rssParser.parseRSSFeed(rssSource.url, rssSource.name.toLowerCase().replace(/\s+/g, '_'));
+      if (items.length > 0) {
+        rawItems = items;
+        console.log(`✅ Successfully got ${items.length} items from ${rssSource.name}`);
+      } else {
+        console.log(`ℹ️  No items found in ${rssSource.name} feed`);
       }
+    } catch (error) {
+      console.warn(`⚠️  Failed to parse ${rssSource.name}:`, error.message);
+      errors++;
     }
 
-    const { processed, avgScore } = await this.processAndStore(rawItems, 'peoplematters');
+    // Use source name as the database source identifier
+    const sourceId = rssSource.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    const { processed, avgScore } = await this.processAndStore(rawItems, sourceId);
     const duration = Date.now() - startTime;
 
     return {
-      source: 'PeopleMatters',
-      collected: rawItems.length,
-      processed,
-      errors,
-      avgScore,
-      duration
-    };
-  }
-
-  private async collectFromHRKatha(): Promise<CollectionResult> {
-    const startTime = Date.now();
-    console.log('📰 Collecting from HR Katha...');
-    
-    let rawItems: RawContentItem[] = [];
-    let errors = 0;
-
-    // Try multiple RSS URLs for HR Katha
-    for (const url of RSS_FEEDS.hrkatha.urls) {
-      try {
-        console.log(`📡 Trying RSS feed: ${url}`);
-        const items = await this.rssParser.parseRSSFeed(url, 'hrkatha');
-        if (items.length > 0) {
-          rawItems = items;
-          console.log(`✅ Successfully got ${items.length} items from ${url}`);
-          break;
-        }
-      } catch (error) {
-        console.warn(`⚠️  Failed to parse ${url}:`, error.message);
-        errors++;
-      }
-    }
-
-    const { processed, avgScore } = await this.processAndStore(rawItems, 'hrkatha');
-    const duration = Date.now() - startTime;
-
-    return {
-      source: 'HRKatha',
+      source: rssSource.name,
       collected: rawItems.length,
       processed,
       errors,
