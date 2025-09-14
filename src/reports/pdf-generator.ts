@@ -222,7 +222,7 @@ export class PDFGenerator {
 
     // Chart 2: Quality Score Distribution
     const scoreRanges = sources.reduce((acc, source) => {
-      const score = source.composite_score;
+      const score = Number(source.composite_score);
       if (score >= 0.8) acc['High (0.8-1.0)']++;
       else if (score >= 0.6) acc['Medium (0.6-0.8)']++;
       else if (score >= 0.4) acc['Low (0.4-0.6)']++;
@@ -375,9 +375,9 @@ export class PDFGenerator {
                 <tbody>
                     <tr>
                         <td>Sources (by score)</td>
-                        <td>${sources.filter(s => s.composite_score >= 0.7).length}</td>
-                        <td>${sources.filter(s => s.composite_score >= 0.5 && s.composite_score < 0.7).length}</td>
-                        <td>${sources.filter(s => s.composite_score < 0.5).length}</td>
+                        <td>${sources.filter(s => Number(s.composite_score) >= 0.7).length}</td>
+                        <td>${sources.filter(s => Number(s.composite_score) >= 0.5 && Number(s.composite_score) < 0.7).length}</td>
+                        <td>${sources.filter(s => Number(s.composite_score) < 0.5).length}</td>
                     </tr>
                     <tr>
                         <td>Has Statistics</td>

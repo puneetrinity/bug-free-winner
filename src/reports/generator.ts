@@ -173,7 +173,7 @@ export class ReportGenerator {
         .filter((source, index, self) => 
           index === self.findIndex(s => s.id === source.id)
         )
-        .sort((a, b) => b.composite_score - a.composite_score)
+        .sort((a, b) => Number(b.composite_score) - Number(a.composite_score))
         .slice(0, maxSources);
     }
 
@@ -187,10 +187,10 @@ export class ReportGenerator {
 
     // Prioritize high-quality sources
     sources = sources
-      .filter(source => source.composite_score > 0.3)
-      .sort((a, b) => b.composite_score - a.composite_score);
+      .filter(source => Number(source.composite_score) > 0.3)
+      .sort((a, b) => Number(b.composite_score) - Number(a.composite_score));
 
-    console.log(`📊 Selected ${sources.length} high-quality sources (avg score: ${(sources.reduce((sum, s) => sum + s.composite_score, 0) / sources.length).toFixed(3)})`);
+    console.log(`📊 Selected ${sources.length} high-quality sources (avg score: ${(sources.reduce((sum, s) => sum + Number(s.composite_score), 0) / sources.length).toFixed(3)})`);
     
     return sources;
   }
