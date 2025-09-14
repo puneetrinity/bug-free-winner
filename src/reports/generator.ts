@@ -246,7 +246,7 @@ Use [Source X] citations throughout. Focus on Indian HR market context.`
 
     try {
       const response = await axios.post(this.groqApiUrl, {
-        model: 'llama3-70b-8192',
+        model: 'llama-3.3-70b-versatile',
         messages,
         temperature: 0.3,
         max_tokens: 4000
@@ -293,7 +293,7 @@ Note: This analysis is based on ${sourceCount} recent sources from the Indian HR
 
     try {
       const response = await axios.post(this.groqApiUrl, {
-        model: 'llama3-70b-8192',
+        model: 'llama-3.3-70b-versatile',
         messages,
         temperature: 0.2,
         max_tokens: 300
