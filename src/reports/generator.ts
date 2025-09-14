@@ -185,18 +185,44 @@ export class ReportGenerator {
       new Date(source.published_at || source.collected_at) > cutoffDate
     );
     
-    // Filter out generic government/regulatory content unless specifically relevant to the topic
+    // Filter out irrelevant government/regulatory content unless specifically relevant to the topic
     if (!topic.toLowerCase().includes('epfo') && !topic.toLowerCase().includes('regulation')) {
       sources = sources.filter(source => {
-        const contentText = (source.title + ' ' + (source.snippet || '')).toLowerCase();
-        // Only exclude if it's primarily about EPFO/ESI without HR relevance
-        const isGenericGovContent = contentText.includes('epfo') && 
-          !contentText.includes('hr') && 
-          !contentText.includes('employee') && 
-          !contentText.includes('attrition') &&
-          !contentText.includes('recruitment');
-        return !isGenericGovContent;
+        const contentText = (source.title + ' ' + (source.snippet || '') + ' ' + (source.full_content || '')).toLowerCase();
+        
+        // Exclude EPFO technical/service announcements that aren't HR-related
+        const isEPFOServiceContent = (
+          contentText.includes('epfo') && (
+            contentText.includes('service disruption') ||
+            contentText.includes('technical upgrade') ||
+            contentText.includes('intermittent disruption') ||
+            contentText.includes('claim filing') ||
+            contentText.includes('website maintenance')
+          ) && !(
+            contentText.includes('attrition') ||
+            contentText.includes('employee turnover') ||
+            contentText.includes('job change') ||
+            contentText.includes('resignation') ||
+            contentText.includes('talent retention')
+          )
+        );
+        
+        // Exclude generic government announcements
+        const isGenericGovContent = (
+          source.url.includes('pib.gov.in') ||
+          source.url.includes('epfindia.gov.in')
+        ) && !(
+          contentText.includes('attrition') ||
+          contentText.includes('employee') ||
+          contentText.includes('hr') ||
+          contentText.includes('recruitment') ||
+          contentText.includes('talent')
+        );
+        
+        return !isEPFOServiceContent && !isGenericGovContent;
       });
+      
+      console.log(`🔍 After filtering irrelevant content: ${sources.length} sources remaining`);
     }
 
     // Prioritize high-quality sources
