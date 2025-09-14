@@ -251,7 +251,7 @@ app.post('/api/reports/generate-pdf-deep-dive', async (req, res) => {
     console.log(`   Live search results: ${validatedData.max_sources}, Search recency: ${validatedData.time_range_days} days`);
     
     // Check if API keys are available for live search
-    const braveApiKey = process.env.BRAVE_SEARCH_API_KEY;
+    const braveApiKey = process.env.BRAVE_API_KEY || process.env.BRAVE_SEARCH_API_KEY;
     const scrapingBeeApiKey = process.env.SCRAPINGBEE_API_KEY;
     
     console.log('🔑 API Key Check:', {
@@ -268,7 +268,7 @@ app.post('/api/reports/generate-pdf-deep-dive', async (req, res) => {
       });
       return res.status(503).json({
         success: false,
-        error: 'Deep dive PDF generation requires API keys for live search. Please configure BRAVE_SEARCH_API_KEY and SCRAPINGBEE_API_KEY environment variables.'
+        error: 'Deep dive PDF generation requires API keys for live search. Please configure BRAVE_API_KEY (or BRAVE_SEARCH_API_KEY) and SCRAPINGBEE_API_KEY environment variables.'
       });
     }
 
@@ -811,8 +811,9 @@ app.listen(port, () => {
   console.log(`🚀 HR Research Platform API running on port ${port}`);
   
   // Log API key availability
+  const braveKey = process.env.BRAVE_API_KEY || process.env.BRAVE_SEARCH_API_KEY;
   console.log(`🔑 API Keys Status:`, {
-    BRAVE: process.env.BRAVE_SEARCH_API_KEY ? `✅ Configured (${process.env.BRAVE_SEARCH_API_KEY.substring(0, 8)}...)` : '❌ Not configured',
+    BRAVE: braveKey ? `✅ Configured (${braveKey.substring(0, 8)}...)` : '❌ Not configured',
     SCRAPINGBEE: process.env.SCRAPINGBEE_API_KEY ? `✅ Configured (${process.env.SCRAPINGBEE_API_KEY.substring(0, 8)}...)` : '❌ Not configured',
     GROQ: process.env.GROQ_API_KEY ? `✅ Configured` : '❌ Not configured'
   });
