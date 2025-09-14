@@ -1,11 +1,6 @@
-[providers.node]
+providers = ["node"]
 
-[phases.build]
-cmds = [
-    "npm ci --prefer-offline --no-audit --no-fund"
-]
-
-[phases.install]
+[phases.setup]
 aptPkgs = [
     "chromium",
     "libnss3",
@@ -21,8 +16,10 @@ aptPkgs = [
     "libglu1"
 ]
 
+[phases.install]
+cmds = ["npm ci --prefer-offline --no-audit --no-fund"]
+
 [variables]
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
 PUPPETEER_SKIP_DOWNLOAD = "true"
 PUPPETEER_EXECUTABLE_PATH = "/usr/bin/chromium"
-NODE_ENV = "production"
