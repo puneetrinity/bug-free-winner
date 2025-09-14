@@ -422,11 +422,37 @@ app.post('/api/admin/migrate', async (req, res) => {
     const schemaPath = path.join(__dirname, 'db', 'schema.sql');
     const schema = fs.readFileSync(schemaPath, 'utf-8');
     
-    // Split schema into statements
-    const statements = schema
-      .split(';')
-      .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.startsWith('--'));
+    // Split schema into statements more carefully
+    // Remove comments first
+    const cleanSchema = schema
+      .split('\n')
+      .filter(line => !line.trim().startsWith('--'))
+      .join('\n');
+    
+    // Split on standalone semicolons (not inside parentheses)
+    const statements = [];
+    let currentStatement = '';
+    let parenLevel = 0;
+    
+    for (let i = 0; i < cleanSchema.length; i++) {
+      const char = cleanSchema[i];
+      currentStatement += char;
+      
+      if (char === '(') parenLevel++;
+      else if (char === ')') parenLevel--;
+      else if (char === ';' && parenLevel === 0) {
+        const stmt = currentStatement.slice(0, -1).trim();
+        if (stmt.length > 0) {
+          statements.push(stmt);
+        }
+        currentStatement = '';
+      }
+    }
+    
+    // Add final statement if exists
+    if (currentStatement.trim().length > 0) {
+      statements.push(currentStatement.trim());
+    }
 
     console.log(`🔨 Executing ${statements.length} SQL statements...`);
 
