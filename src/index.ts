@@ -360,6 +360,26 @@ app.use((error: Error, req: express.Request, res: express.Response, next: expres
   });
 });
 
+// Database test endpoint
+app.post('/api/admin/test-db', async (req, res) => {
+  try {
+    console.log('🧪 Testing database connection...');
+    const result = await db.query('SELECT NOW() as current_time');
+    
+    res.json({ 
+      success: true, 
+      message: 'Database connection successful',
+      server_time: result.rows[0].current_time
+    });
+  } catch (error: any) {
+    console.error('Database test failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 // Database migration endpoint (protected by simple auth)
 app.post('/api/admin/migrate', async (req, res) => {
   try {
