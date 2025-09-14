@@ -1,0 +1,28 @@
+[providers.node]
+
+[phases.build]
+cmds = [
+    "npm ci --prefer-offline --no-audit --no-fund"
+]
+
+[phases.install]
+aptPkgs = [
+    "chromium",
+    "libnss3",
+    "libatk1.0-0", 
+    "libatk-bridge2.0-0",
+    "libcups2",
+    "libgbm1",
+    "libasound2t64",
+    "libpangocairo-1.0-0",
+    "libxss1",
+    "libgtk-3-0",
+    "libxshmfence1",
+    "libglu1"
+]
+
+[variables]
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
+PUPPETEER_SKIP_DOWNLOAD = "true"
+PUPPETEER_EXECUTABLE_PATH = "/usr/bin/chromium"
+NODE_ENV = "production"
