@@ -306,7 +306,24 @@ app.get('/api/reports/:id/pdf', async (req, res) => {
 app.get('/api/stats/collection', async (req, res) => {
   try {
     const days = req.query.days ? parseInt(req.query.days as string) : 7;
-    const stats = await db.getCollectionStats(days);
+    
+    // Handle case where tables don't exist yet
+    let stats;
+    try {
+      stats = await db.getCollectionStats(days);
+    } catch (error: any) {
+      if (error.message.includes('does not exist')) {
+        // Tables don't exist yet, return empty stats
+        return res.json({
+          success: true,
+          period_days: days,
+          by_source: [],
+          raw_data: [],
+          message: 'Database not initialized yet'
+        });
+      }
+      throw error;
+    }
     
     // Aggregate stats by source
     const aggregated = stats.reduce((acc, stat) => {
@@ -383,16 +400,20 @@ app.post('/api/admin/test-db', async (req, res) => {
 // Simple database migration endpoint
 app.post('/api/admin/migrate', async (req, res) => {
   try {
+    console.log('📨 Migration endpoint called');
+    
     // Simple auth check - in production, use proper auth
     const authHeader = req.headers.authorization;
     if (authHeader !== 'Bearer migrate-db-2024') {
+      console.log('❌ Unauthorized migration attempt');
       return res.status(401).json({ 
         success: false, 
         error: 'Unauthorized' 
       });
     }
 
-    console.log('🗄️ Running simple database migration...');
+    console.log('✅ Authorization successful');
+    console.log('🗄️ Starting simple database migration...');
     
     // Read schema file directly and execute
     const fs = await import('fs');
