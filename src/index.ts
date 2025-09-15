@@ -993,8 +993,8 @@ app.listen(port, () => {
   // Log API key availability
   const braveKey = process.env.BRAVE_API_KEY || process.env.BRAVE_SEARCH_API_KEY;
   console.log('🔑 API Keys Status:', {
-    BRAVE: braveKey ? `✅ Configured (${braveKey.substring(0, 8)}...)` : '❌ Not configured',
-    SCRAPINGBEE: process.env.SCRAPINGBEE_API_KEY ? `✅ Configured (${process.env.SCRAPINGBEE_API_KEY.substring(0, 8)}...)` : '❌ Not configured',
+    BRAVE: braveKey ? '✅ Configured' : '❌ Not configured',
+    SCRAPINGBEE: process.env.SCRAPINGBEE_API_KEY ? '✅ Configured' : '❌ Not configured',
     GROQ: process.env.GROQ_API_KEY ? '✅ Configured' : '❌ Not configured'
   });
   
