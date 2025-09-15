@@ -103,9 +103,9 @@ class RSSCollectionManager {
         await db.query(`
           INSERT INTO rss_articles (
             feed_name, feed_group, feed_category,
-            title, url, description, content_hash,
+            title, url, description, image_url, content_hash,
             author, published_at, guid, categories
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         `, [
           metadata.source_name || 'Unknown',
           metadata.source_group || 'unknown',
@@ -113,6 +113,7 @@ class RSSCollectionManager {
           article.title,
           article.url,
           article.snippet || article.full_content?.substring(0, 500),
+          (article as any).image_url,
           contentHash,
           article.author,
           article.published_at,

@@ -135,11 +135,33 @@ function parseRSSItem(item: any, source: RSSSource): RawContentItem | null {
     description = description.replace(/&nbsp;/g, ' '); // Replace &nbsp;
     description = description.replace(/\s+/g, ' ').trim(); // Clean whitespace
     
+    // Extract image URL from various RSS fields
+    let imageUrl = null;
+    if (item.image && item.image.url) {
+      imageUrl = item.image.url;
+    } else if (item['media:thumbnail'] && item['media:thumbnail']['@']) {
+      imageUrl = item['media:thumbnail']['@'].url;
+    } else if (item.enclosures && item.enclosures.length > 0) {
+      // Find image enclosure
+      const imageEnclosure = item.enclosures.find((enc: any) => 
+        enc.type && enc.type.startsWith('image/')
+      );
+      if (imageEnclosure) {
+        imageUrl = imageEnclosure.url;
+      }
+    } else if (item['content:encoded']) {
+      // Extract first image from content
+      const imgMatch = item['content:encoded'].match(/<img[^>]+src="([^">]+)"/);
+      if (imgMatch) {
+        imageUrl = imgMatch[1];
+      }
+    }
+    
     // Generate content hash from URL or GUID
     const uniqueId = item.link || item.guid || `${item.title}-${item.pubDate}`;
     const contentHash = crypto.createHash('md5').update(uniqueId).digest('hex');
     
-    const rawItem: RawContentItem & { metadata?: any; content_hash?: string } = {
+    const rawItem: RawContentItem & { metadata?: any; content_hash?: string; image_url?: string } = {
       title: item.title || 'Untitled',
       url: item.link || item.guid || '',
       snippet: description.substring(0, 500),
@@ -151,6 +173,7 @@ function parseRSSItem(item: any, source: RSSSource): RawContentItem | null {
     
     // Add metadata as extended properties
     (rawItem as any).content_hash = contentHash;
+    (rawItem as any).image_url = imageUrl;
     (rawItem as any).metadata = {
       source_name: source.name,
       source_group: source.source_group,

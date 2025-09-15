@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS rss_articles (
   title TEXT NOT NULL,
   url TEXT NOT NULL,
   description TEXT,
+  image_url TEXT, -- RSS feed images
   content_hash TEXT UNIQUE NOT NULL, -- For deduplication
   
   -- Metadata
