@@ -137,21 +137,38 @@ function parseRSSItem(item: any, source: RSSSource): RawContentItem | null {
     
     // Extract image URL from various RSS fields
     let imageUrl = null;
-    if (item.image && item.image.url) {
-      imageUrl = item.image.url;
-    } else if (item['media:thumbnail'] && item['media:thumbnail']['@']) {
-      imageUrl = item['media:thumbnail']['@'].url;
-    } else if (item.enclosures && item.enclosures.length > 0) {
-      // Find image enclosure
+    
+    // Try enclosures first (most reliable)
+    if (item.enclosures && item.enclosures.length > 0) {
       const imageEnclosure = item.enclosures.find((enc: any) => 
         enc.type && enc.type.startsWith('image/')
       );
-      if (imageEnclosure) {
+      if (imageEnclosure && imageEnclosure.url) {
         imageUrl = imageEnclosure.url;
       }
-    } else if (item['content:encoded']) {
-      // Extract first image from content
-      const imgMatch = item['content:encoded'].match(/<img[^>]+src="([^">]+)"/);
+    }
+    
+    // Try description images
+    if (!imageUrl && item.description) {
+      const imgMatch = item.description.match(/<img[^>]+src=["']([^"']+)["']/i);
+      if (imgMatch) {
+        imageUrl = imgMatch[1];
+      }
+    }
+    
+    // Try media fields
+    if (!imageUrl && item['media:thumbnail'] && item['media:thumbnail']['@']) {
+      imageUrl = item['media:thumbnail']['@'].url;
+    }
+    
+    // Try item image field
+    if (!imageUrl && item.image && item.image.url) {
+      imageUrl = item.image.url;
+    }
+    
+    // Try content:encoded
+    if (!imageUrl && item['content:encoded']) {
+      const imgMatch = item['content:encoded'].match(/<img[^>]+src=["']([^"']+)["']/i);
       if (imgMatch) {
         imageUrl = imgMatch[1];
       }
