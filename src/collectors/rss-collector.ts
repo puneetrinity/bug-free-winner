@@ -129,6 +129,14 @@ export class RSSCollector {
 
 function parseRSSItem(item: any, source: RSSSource): RawContentItem | null {
   try {
+    // Debug: Log item structure to understand RSS parsing
+    if (source.name.includes('ET HR World')) {
+      console.log(`🔍 Debug RSS item for ${source.name}:`);
+      console.log('Available properties:', Object.keys(item));
+      console.log('media:content:', item['media:content']);
+      console.log('Item object structure:', JSON.stringify(item, null, 2).substring(0, 500));
+    }
+    
     // Extract and clean description
     let description = item.description || item.summary || '';
     description = description.replace(/<[^>]*>/g, ''); // Remove HTML tags
