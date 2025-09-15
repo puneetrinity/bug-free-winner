@@ -203,22 +203,28 @@ class Database {
     return result.rows[0] || null;
   }
 
-  // Citations
+  // Citations - Updated to handle both content_items and rss_articles
   async insertCitations(citations: Omit<Citation, 'id' | 'created_at'>[]): Promise<Citation[]> {
     if (citations.length === 0) return [];
     
     const values = citations.map((c, i) => 
-      `($${i*5+1}, $${i*5+2}, $${i*5+3}, $${i*5+4}, $${i*5+5})`
+      `($${i*7+1}, $${i*7+2}, $${i*7+3}, $${i*7+4}, $${i*7+5}, $${i*7+6}, $${i*7+7})`
     ).join(', ');
     
     const query = `
-      INSERT INTO citations (report_id, content_item_id, citation_number, quoted_text, context)
+      INSERT INTO citations (report_id, content_item_id, citation_number, quoted_text, context, source_type, source_id)
       VALUES ${values}
       RETURNING *
     `;
     
     const flatValues = citations.flatMap(c => [
-      c.report_id, c.content_item_id, c.citation_number, c.quoted_text, c.context
+      c.report_id, 
+      c.content_item_id || null,
+      c.citation_number, 
+      c.quoted_text, 
+      c.context,
+      c.source_type || 'content_item',
+      c.source_id || c.content_item_id
     ]);
     
     const result = await this.query(query, flatValues);

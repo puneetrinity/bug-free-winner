@@ -116,14 +116,22 @@ export class ReportGenerator {
       const report = await db.insertReport(reportData);
       console.log(`💾 Report saved with ID: ${report.id}`);
 
-      // Step 8: Save citations
-      const citationRecords = citations.map(citation => ({
-        report_id: report.id,
-        content_item_id: citation.sourceId,
-        citation_number: citation.number,
-        quoted_text: citation.text,
-        context: citation.context
-      }));
+      // Step 8: Save citations - Handle both content items and RSS articles
+      const citationRecords = citations.map(citation => {
+        // Find the source to determine if it's from RSS or content_items
+        const source = sources.find(s => s.id === citation.sourceId);
+        const isRSSArticle = source && source.source.includes('rss') || source?.source.includes('et_hr') || source?.source.includes('indian_hr_blogs');
+        
+        return {
+          report_id: report.id,
+          content_item_id: isRSSArticle ? undefined : citation.sourceId,
+          citation_number: citation.number,
+          quoted_text: citation.text,
+          context: citation.context,
+          source_type: isRSSArticle ? 'rss_article' as const : 'content_item' as const,
+          source_id: citation.sourceId
+        };
+      });
 
       if (citationRecords.length > 0) {
         await db.insertCitations(citationRecords);

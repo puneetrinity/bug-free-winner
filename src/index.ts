@@ -1123,6 +1123,57 @@ app.post('/api/admin/fix-image-column', async (req, res) => {
   }
 });
 
+// Citations schema migration endpoint - fixes PDF generation foreign key constraint
+app.post('/api/admin/fix-citations-schema', async (req, res) => {
+  try {
+    console.log('🔧 Citations schema fix endpoint called');
+    
+    // Simple auth check
+    const authHeader = req.headers.authorization;
+    if (authHeader !== 'Bearer migrate-db-2024') {
+      console.log('❌ Unauthorized citations schema fix attempt');
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Unauthorized' 
+      });
+    }
+
+    console.log('✅ Authorization successful');
+    console.log('🔨 Updating citations table schema...');
+    
+    // Read and execute the citation migration
+    const fs = await import('fs');
+    const path = await import('path');
+    
+    const migrationSQL = fs.readFileSync(
+      path.join(__dirname, '..', 'fix-citations-schema.sql'), 
+      'utf-8'
+    );
+    
+    // Execute the migration (it's already wrapped in a transaction)
+    await db.query(migrationSQL);
+    
+    console.log('✅ Citations schema updated successfully!');
+    
+    res.json({ 
+      success: true, 
+      message: 'Citations schema updated successfully! PDF generation should now work with RSS articles.',
+      changes: [
+        'Added source_type and source_id columns',
+        'Updated foreign key constraints',
+        'Made content_item_id nullable for RSS articles'
+      ]
+    });
+    
+  } catch (error: any) {
+    console.error('Citations schema fix failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 // RSS Collection endpoint
 app.post('/api/admin/collect-rss', async (req, res) => {
   try {

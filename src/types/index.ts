@@ -55,11 +55,14 @@ export interface Report {
 export interface Citation {
   id: string;
   report_id: string;
-  content_item_id: string;
+  content_item_id?: string;  // Made optional for RSS articles
   citation_number: number;
   quoted_text?: string;
   context?: string;
   created_at: Date;
+  // New fields for flexible source referencing
+  source_type?: 'content_item' | 'rss_article';
+  source_id?: string;
 }
 
 export interface CollectionStats {
