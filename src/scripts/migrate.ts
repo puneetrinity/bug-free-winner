@@ -6,6 +6,7 @@ import db from '../db/connection';
 
 class DatabaseMigrator {
   private schemaPath = path.join(__dirname, '..', 'db', 'schema.sql');
+  private rssSchemaPath = path.join(__dirname, '..', 'db', 'rss-schema.sql');
 
   async migrate(): Promise<void> {
     console.log('🗄️  Starting database migration...');
@@ -53,7 +54,11 @@ class DatabaseMigrator {
         }
       }
 
-      console.log('\n🎉 Database migration completed successfully!');
+      console.log('\n🎉 Main database migration completed successfully!');
+      
+      // Now run RSS schema migration
+      await this.migrateRSSSchema();
+      
       await this.verifyTables();
       
     } catch (error) {
@@ -62,10 +67,65 @@ class DatabaseMigrator {
     }
   }
 
+  async migrateRSSSchema(): Promise<void> {
+    console.log('📰 Running RSS schema migration...');
+    
+    try {
+      // Check if RSS schema file exists
+      if (!fs.existsSync(this.rssSchemaPath)) {
+        console.log('⚠️ RSS schema file not found, skipping RSS migration');
+        return;
+      }
+
+      // Read and execute RSS schema
+      const rssSchema = fs.readFileSync(this.rssSchemaPath, 'utf-8');
+      console.log('📖 Reading RSS schema file...');
+      
+      // Split schema into individual statements
+      const statements = rssSchema
+        .split(';')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+      console.log(`🔨 Executing ${statements.length} RSS SQL statements...`);
+
+      for (let i = 0; i < statements.length; i++) {
+        const statement = statements[i];
+        if (statement.toLowerCase().startsWith('--') || statement.length === 0) {
+          continue;
+        }
+
+        try {
+          await db.query(statement + ';');
+          
+          // Extract table/operation name for logging
+          const operation = this.extractOperation(statement);
+          console.log(`  ✅ RSS ${i + 1}/${statements.length}: ${operation}`);
+          
+        } catch (error) {
+          // Some statements might fail if tables already exist
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          if (errorMessage.includes('already exists')) {
+            const operation = this.extractOperation(statement);
+            console.log(`  ⚠️  RSS ${i + 1}/${statements.length}: ${operation} (already exists)`);
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      console.log('✅ RSS schema migration completed successfully!');
+      
+    } catch (error) {
+      console.error('❌ RSS migration failed:', error);
+      throw error;
+    }
+  }
+
   async reset(): Promise<void> {
     console.log('🧹 Resetting database (dropping all tables)...');
     
-    const tables = ['citations', 'reports', 'content_items', 'collection_stats'];
+    const tables = ['citations', 'reports', 'content_items', 'collection_stats', 'rss_articles', 'rss_collection_stats'];
     
     for (const table of tables) {
       try {
@@ -131,7 +191,7 @@ class DatabaseMigrator {
   private async verifyTables(): Promise<void> {
     console.log('\n🔍 Verifying database structure...');
     
-    const expectedTables = ['content_items', 'reports', 'citations', 'collection_stats'];
+    const expectedTables = ['content_items', 'reports', 'citations', 'collection_stats', 'rss_articles', 'rss_collection_stats'];
     
     for (const table of expectedTables) {
       try {
