@@ -5,7 +5,7 @@ export interface RSSSource {
   name: string;
   url: string;
   category: 'general' | 'technology' | 'recruitment' | 'analytics' | 'leadership' | 'diversity' | 'wellbeing' | 'jobs' | 'business';
-  source_group: 'et_hr' | 'indian_express' | 'toi' | 'google_news' | 'global_hr' | 'government';
+  source_group: 'et_hr' | 'indian_express' | 'toi' | 'google_news' | 'global_hr' | 'government' | 'indian_hr_blogs';
   priority: 1 | 2 | 3;
   update_frequency: 'hourly' | 'daily' | 'weekly';
 }
@@ -144,6 +144,72 @@ export const RSS_SOURCES: RSSSource[] = [
     category: 'wellbeing',
     source_group: 'google_news',
     priority: 2,
+    update_frequency: 'daily'
+  },
+
+  // Additional Indian HR Publications
+  {
+    name: 'HRKatha - HR News India',
+    url: 'https://www.hrkatha.com/feed/',
+    category: 'general',
+    source_group: 'indian_hr_blogs',
+    priority: 1,
+    update_frequency: 'daily'
+  },
+  {
+    name: 'SHRM HR News',
+    url: 'https://rss.shrm.org/hrnews',
+    category: 'general',
+    source_group: 'global_hr',
+    priority: 1,
+    update_frequency: 'hourly'
+  },
+  {
+    name: 'Google News - SHRM India',
+    url: 'https://news.google.com/rss/search?q=SHRM+India+human+resources',
+    category: 'general',
+    source_group: 'google_news',
+    priority: 2,
+    update_frequency: 'daily'
+  },
+  {
+    name: 'Google News - HR Tech India',
+    url: 'https://news.google.com/rss/search?q=HR+technology+India+software',
+    category: 'technology',
+    source_group: 'google_news',
+    priority: 1,
+    update_frequency: 'daily'
+  },
+  {
+    name: 'Google News - Talent Management India',
+    url: 'https://news.google.com/rss/search?q=talent+management+India+recruitment',
+    category: 'recruitment',
+    source_group: 'google_news',
+    priority: 1,
+    update_frequency: 'daily'
+  },
+  {
+    name: 'Google News - Workplace Diversity India',
+    url: 'https://news.google.com/rss/search?q=workplace+diversity+India+inclusion',
+    category: 'diversity',
+    source_group: 'google_news',
+    priority: 1,
+    update_frequency: 'daily'
+  },
+  {
+    name: 'Google News - Employee Benefits India',
+    url: 'https://news.google.com/rss/search?q=employee+benefits+India+compensation',
+    category: 'wellbeing',
+    source_group: 'google_news',
+    priority: 2,
+    update_frequency: 'daily'
+  },
+  {
+    name: 'Google News - HR Analytics India',
+    url: 'https://news.google.com/rss/search?q=HR+analytics+India+data',
+    category: 'analytics',
+    source_group: 'google_news',
+    priority: 1,
     update_frequency: 'daily'
   }
 ];
