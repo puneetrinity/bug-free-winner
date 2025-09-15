@@ -10,10 +10,10 @@
     "db:migrate": "tsx src/scripts/migrate.ts",
     "db:reset": "tsx src/scripts/migrate.ts --reset",
     "db:seed": "tsx src/scripts/migrate.ts --seed",
-    "collect": "tsx src/scripts/collect.ts",
-    "collect:stats": "tsx src/scripts/collect.ts --stats",
     "collect:rss": "tsx src/scripts/collect-rss.ts",
     "collect:rss:hourly": "tsx src/scripts/collect-rss.ts --hourly",
+    "collect:rss:search": "tsx src/scripts/collect-rss.ts --search",
+    "collect:rss:recent": "tsx src/scripts/collect-rss.ts --recent",
     "generate": "tsx src/scripts/generate-report.ts",
     "lint": "eslint 'src/**/*.ts'",
     "lint:fix": "eslint 'src/**/*.ts' --fix"

@@ -5,7 +5,7 @@ const swaggerDefinition = {
   info: {
     title: 'HR Research Platform API',
     version: '1.0.0',
-    description: 'AI-powered HR research platform for the Indian market. Collects HR content from PIB, PeopleMatters, and HRKatha, then generates comprehensive research reports with citations.',
+    description: 'AI-powered HR research platform for the Indian market. Collects curated HR content from Economic Times HR World, Indian Express, and Google News via RSS feeds, plus real-time search via Brave + ScrapingBee. Generates comprehensive research reports using Groq AI with proper citations.',
     contact: {
       name: 'API Support',
       url: 'https://github.com/puneetrinity/bug-free-winner'

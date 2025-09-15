@@ -150,42 +150,49 @@ class DatabaseMigrator {
   async seed(): Promise<void> {
     console.log('🌱 Seeding database with sample data...');
     
-    // Add some sample collection stats
-    const sampleStats = [
+    // Add sample RSS collection stats
+    const sampleRSSStats = [
       {
-        date: new Date(Date.now() - 24 * 60 * 60 * 1000), // Yesterday
-        source: 'pib',
-        items_collected: 12,
-        items_processed: 10,
-        avg_quality_score: 0.78,
-        errors_count: 2,
-        collection_time_ms: 15000
-      },
-      {
-        date: new Date(Date.now() - 24 * 60 * 60 * 1000),
-        source: 'brave-search',
-        items_collected: 8,
-        items_processed: 8,
-        avg_quality_score: 0.65,
-        errors_count: 0,
-        collection_time_ms: 12000
-      },
-      {
-        date: new Date(),
-        source: 'brave-search',
-        items_collected: 6,
-        items_processed: 5,
-        avg_quality_score: 0.72,
-        errors_count: 1,
+        collection_date: new Date().toISOString().split('T')[0],
+        feed_name: 'ET HR World - Top Stories',
+        articles_collected: 15,
+        articles_new: 12,
+        articles_duplicate: 3,
         collection_time_ms: 8000
+      },
+      {
+        collection_date: new Date().toISOString().split('T')[0],
+        feed_name: 'Google News - HR India',
+        articles_collected: 8,
+        articles_new: 8,
+        articles_duplicate: 0,
+        collection_time_ms: 5000
       }
     ];
 
-    for (const stats of sampleStats) {
-      await db.updateCollectionStats(stats);
+    for (const stats of sampleRSSStats) {
+      try {
+        await db.query(`
+          INSERT INTO rss_collection_stats (
+            collection_date, feed_name, articles_collected, 
+            articles_new, articles_duplicate, collection_time_ms
+          ) VALUES ($1, $2, $3, $4, $5, $6)
+        `, [
+          stats.collection_date,
+          stats.feed_name, 
+          stats.articles_collected,
+          stats.articles_new,
+          stats.articles_duplicate,
+          stats.collection_time_ms
+        ]);
+      } catch (error) {
+        // Ignore if RSS tables don't exist yet
+        console.log('⚠️ RSS tables not available for seeding');
+        break;
+      }
     }
 
-    console.log(`✅ Seeded ${sampleStats.length} collection stats records`);
+    console.log(`✅ Seeded sample RSS collection stats`);
   }
 
   private async verifyTables(): Promise<void> {
@@ -261,8 +268,8 @@ async function main() {
     
     console.log('\n🎯 Database is ready for use!');
     console.log('\nNext steps:');
-    console.log('  npm run collect          # Collect content from all sources');
-    console.log('  npm run collect --stats  # View collection statistics');
+    console.log('  npm run collect:rss      # Collect RSS articles from HR sources');
+    console.log('  npm run generate "topic" # Generate research reports (uses RSS + real-time search)');
     
   } catch (error) {
     console.error('💥 Migration failed:', error);
