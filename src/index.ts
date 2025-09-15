@@ -1174,6 +1174,42 @@ app.post('/api/admin/fix-citations-schema', async (req, res) => {
   }
 });
 
+// Simple citation constraint fix - just drop the foreign key
+app.post('/api/admin/drop-citation-constraint', async (req, res) => {
+  try {
+    console.log('🔧 Dropping citation foreign key constraint...');
+    
+    // Simple auth check
+    const authHeader = req.headers.authorization;
+    if (authHeader !== 'Bearer migrate-db-2024') {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Unauthorized' 
+      });
+    }
+
+    // Drop the foreign key constraint
+    await db.query(`
+      ALTER TABLE citations 
+      DROP CONSTRAINT IF EXISTS citations_content_item_id_fkey
+    `);
+    
+    console.log('✅ Foreign key constraint dropped successfully!');
+    
+    res.json({ 
+      success: true, 
+      message: 'Citation foreign key constraint removed. PDF generation should now work with RSS articles.'
+    });
+    
+  } catch (error: any) {
+    console.error('Constraint removal failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 // RSS Collection endpoint
 app.post('/api/admin/collect-rss', async (req, res) => {
   try {

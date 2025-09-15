@@ -203,32 +203,73 @@ class Database {
     return result.rows[0] || null;
   }
 
-  // Citations - Updated to handle both content_items and rss_articles
+  // Citations - Handle both content_items and rss_articles
   async insertCitations(citations: Omit<Citation, 'id' | 'created_at'>[]): Promise<Citation[]> {
     if (citations.length === 0) return [];
     
-    const values = citations.map((c, i) => 
-      `($${i*7+1}, $${i*7+2}, $${i*7+3}, $${i*7+4}, $${i*7+5}, $${i*7+6}, $${i*7+7})`
-    ).join(', ');
+    // Check if new columns exist
+    let hasNewColumns = false;
+    try {
+      const checkResult = await this.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'citations' AND column_name = 'source_type'
+      `);
+      hasNewColumns = checkResult.rows.length > 0;
+    } catch (err) {
+      console.log('⚠️ Could not check for new citation columns, using legacy format');
+    }
     
-    const query = `
-      INSERT INTO citations (report_id, content_item_id, citation_number, quoted_text, context, source_type, source_id)
-      VALUES ${values}
-      RETURNING *
-    `;
-    
-    const flatValues = citations.flatMap(c => [
-      c.report_id, 
-      c.content_item_id || null,
-      c.citation_number, 
-      c.quoted_text, 
-      c.context,
-      c.source_type || 'content_item',
-      c.source_id || c.content_item_id
-    ]);
-    
-    const result = await this.query(query, flatValues);
-    return result.rows;
+    if (hasNewColumns) {
+      // Use new schema with source_type and source_id
+      const values = citations.map((c, i) => 
+        `($${i*7+1}, $${i*7+2}, $${i*7+3}, $${i*7+4}, $${i*7+5}, $${i*7+6}, $${i*7+7})`
+      ).join(', ');
+      
+      const query = `
+        INSERT INTO citations (report_id, content_item_id, citation_number, quoted_text, context, source_type, source_id)
+        VALUES ${values}
+        RETURNING *
+      `;
+      
+      const flatValues = citations.flatMap(c => [
+        c.report_id, 
+        c.content_item_id || null,
+        c.citation_number, 
+        c.quoted_text, 
+        c.context,
+        c.source_type || 'content_item',
+        c.source_id || c.content_item_id
+      ]);
+      
+      const result = await this.query(query, flatValues);
+      return result.rows;
+    } else {
+      // Use legacy schema - only insert if we have valid content_item_id
+      const validCitations = citations.filter(c => c.content_item_id);
+      
+      if (validCitations.length === 0) {
+        console.log('⚠️ No valid citations with content_item_id, skipping citation insert');
+        return [];
+      }
+      
+      const values = validCitations.map((c, i) => 
+        `($${i*5+1}, $${i*5+2}, $${i*5+3}, $${i*5+4}, $${i*5+5})`
+      ).join(', ');
+      
+      const query = `
+        INSERT INTO citations (report_id, content_item_id, citation_number, quoted_text, context)
+        VALUES ${values}
+        RETURNING *
+      `;
+      
+      const flatValues = validCitations.flatMap(c => [
+        c.report_id, c.content_item_id, c.citation_number, c.quoted_text, c.context
+      ]);
+      
+      const result = await this.query(query, flatValues);
+      return result.rows;
+    }
   }
 
   // Statistics
