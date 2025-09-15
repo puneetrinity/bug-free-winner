@@ -2,7 +2,7 @@ import axios from 'axios';
 import crypto from 'crypto';
 import db from '../db/connection';
 import { ContentItem, Report } from '../types';
-import { PDFGenerator } from './pdf-generator';
+import { ProfessionalPDFGenerator } from './professional-pdf-generator';
 import { BraveScrapingBeeCollector } from '../collectors/brave-scrapingbee-collector';
 import { ContentScorer } from '../scoring/content-scorer';
 
@@ -38,7 +38,7 @@ interface GenerationResult {
 export class ReportGenerator {
   private groqApiKey: string;
   private groqApiUrl = 'https://api.groq.com/openai/v1/chat/completions';
-  private pdfGenerator: PDFGenerator;
+  private pdfGenerator: ProfessionalPDFGenerator;
   private braveCollector: BraveScrapingBeeCollector | null = null;
   private contentScorer: ContentScorer;
 
@@ -47,7 +47,7 @@ export class ReportGenerator {
     if (!this.groqApiKey) {
       throw new Error('GROQ_API_KEY environment variable is required');
     }
-    this.pdfGenerator = new PDFGenerator();
+    this.pdfGenerator = new ProfessionalPDFGenerator();
     this.contentScorer = new ContentScorer();
     
     // Initialize Brave + ScrapingBee collector if keys available
