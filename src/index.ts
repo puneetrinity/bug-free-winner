@@ -995,6 +995,68 @@ app.post('/api/admin/migrate', async (req, res) => {
   }
 });
 
+// RSS Schema migration endpoint
+app.post('/api/admin/migrate-rss', async (req, res) => {
+  try {
+    console.log('📨 RSS migration endpoint called');
+    
+    // Simple auth check
+    const authHeader = req.headers.authorization;
+    if (authHeader !== 'Bearer migrate-db-2024') {
+      console.log('❌ Unauthorized RSS migration attempt');
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Unauthorized' 
+      });
+    }
+
+    console.log('✅ Authorization successful');
+    console.log('🗄️ Starting RSS schema migration...');
+    
+    // Read RSS schema file
+    const fs = await import('fs');
+    const path = await import('path');
+    
+    const rssSchemaPath = path.join(__dirname, 'db', 'rss-schema.sql');
+    const rssSchema = fs.readFileSync(rssSchemaPath, 'utf-8');
+    
+    // Split into statements
+    const statements = rssSchema
+      .split(';')
+      .map(s => s.trim())
+      .filter(s => s.length > 0 && !s.startsWith('--'));
+    
+    console.log(`📊 Processing ${statements.length} RSS schema statements...`);
+    
+    // Execute each statement
+    for (let i = 0; i < statements.length; i++) {
+      const statement = statements[i];
+      try {
+        await db.query(statement + ';');
+        console.log(`  ✅ ${i + 1}/${statements.length}: ${statement.substring(0, 50)}...`);
+      } catch (error: any) {
+        // Ignore "already exists" errors
+        if (error.message.includes('already exists')) {
+          console.log(`  ⚠️  ${i + 1}/${statements.length}: ${statement.substring(0, 50)}... (already exists)`);
+        } else {
+          throw error;
+        }
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `RSS schema migration completed successfully! Processed ${statements.length} objects.` 
+    });
+  } catch (error: any) {
+    console.error('RSS migration failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 // RSS Collection endpoint
 app.post('/api/admin/collect-rss', async (req, res) => {
   try {
