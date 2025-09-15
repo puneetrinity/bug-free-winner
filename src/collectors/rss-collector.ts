@@ -5,15 +5,7 @@ import crypto from 'crypto';
 import { RSS_SOURCES, RSSSource } from '../config/rss-sources';
 import { RawContentItem } from '../types';
 
-interface RSSArticle {
-  title: string;
-  link: string;
-  description: string;
-  pubDate: Date | null;
-  author?: string;
-  categories?: string[];
-  guid?: string;
-}
+// Removed unused interface - using RawContentItem instead
 
 export class RSSCollector {
   private sources: RSSSource[];
@@ -45,53 +37,57 @@ export class RSSCollector {
   }
 
   async collectFromFeed(source: RSSSource): Promise<RawContentItem[]> {
-    return new Promise(async (resolve, reject) => {
-      const articles: RawContentItem[] = [];
-      
-      try {
-        // Fetch RSS feed
-        const response = await axios.get(source.url, {
-          timeout: 10000,
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; HRResearchBot/1.0)',
-            'Accept': 'application/rss+xml, application/xml, text/xml, */*'
-          }
-        });
-        
-        // Parse RSS feed
-        const feedparser = new FeedParser({
-          normalize: true,
-          addmeta: false
-        });
-        
-        feedparser.on('error', (error: Error) => {
-          reject(error);
-        });
-        
-        feedparser.on('readable', function(this: FeedParser) {
-          let item;
-          while (item = this.read()) {
-            const article = parseRSSItem(item, source);
-            if (article) {
-              articles.push(article);
-            }
-          }
-        });
-        
-        feedparser.on('end', () => {
-          resolve(articles);
-        });
-        
-        // Convert response to stream and pipe to feedparser
-        const stream = new Readable();
-        stream.push(response.data);
-        stream.push(null);
-        stream.pipe(feedparser);
-        
-      } catch (error) {
-        reject(error);
-      }
+    return new Promise((resolve, reject) => {
+      this.fetchAndParseRSS(source, resolve, reject);
     });
+  }
+
+  private async fetchAndParseRSS(source: RSSSource, resolve: (value: RawContentItem[]) => void, reject: (reason?: any) => void): Promise<void> {
+    const articles: RawContentItem[] = [];
+    
+    try {
+      // Fetch RSS feed
+      const response = await axios.get(source.url, {
+        timeout: 10000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; HRResearchBot/1.0)',
+          'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+        }
+      });
+      
+      // Parse RSS feed
+      const feedparser = new FeedParser({
+        normalize: true,
+        addmeta: false
+      });
+      
+      feedparser.on('error', (error: Error) => {
+        reject(error);
+      });
+      
+      feedparser.on('readable', function(this: FeedParser) {
+        let item;
+        while ((item = this.read())) {
+          const article = parseRSSItem(item, source);
+          if (article) {
+            articles.push(article);
+          }
+        }
+      });
+      
+      feedparser.on('end', () => {
+        resolve(articles);
+      });
+      
+      // Convert response to stream and pipe to feedparser
+      const stream = new Readable();
+      stream.push(response.data);
+      stream.push(null);
+      stream.pipe(feedparser);
+      
+    } catch (error) {
+      reject(error);
+    }
   }
 
   async collectByCategory(category: string): Promise<RawContentItem[]> {

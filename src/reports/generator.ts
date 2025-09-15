@@ -1,7 +1,7 @@
 import axios from 'axios';
 import crypto from 'crypto';
 import db from '../db/connection';
-import { ContentItem, Report, RawContentItem } from '../types';
+import { ContentItem, Report } from '../types';
 import { PDFGenerator } from './pdf-generator';
 import { BraveScrapingBeeCollector } from '../collectors/brave-scrapingbee-collector';
 import { ContentScorer } from '../scoring/content-scorer';

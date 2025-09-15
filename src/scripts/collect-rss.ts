@@ -3,7 +3,7 @@
 import { RSSCollector } from '../collectors/rss-collector';
 import { ContentScorer } from '../scoring/content-scorer';
 import db from '../db/connection';
-import { RSS_SOURCES, getHighPriorityFeeds, getHourlyFeeds } from '../config/rss-sources';
+import { getHourlyFeeds } from '../config/rss-sources';
 import crypto from 'crypto';
 
 class RSSCollectionManager {
@@ -196,8 +196,10 @@ async function main() {
   try {
     // First ensure RSS tables exist
     console.log('📊 Ensuring RSS tables exist...');
-    const schemaSQL = require('fs').readFileSync(
-      require('path').join(__dirname, '..', 'db', 'rss-schema.sql'), 
+    const fs = await import('fs');
+    const path = await import('path');
+    const schemaSQL = fs.readFileSync(
+      path.join(__dirname, '..', 'db', 'rss-schema.sql'), 
       'utf-8'
     );
     
