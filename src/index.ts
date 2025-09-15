@@ -978,6 +978,47 @@ app.post('/api/admin/migrate', async (req, res) => {
   }
 });
 
+// RSS Collection endpoint
+app.post('/api/admin/collect-rss', async (req, res) => {
+  try {
+    console.log('📡 Starting RSS collection...');
+    
+    // Simple auth check - in production, use proper auth
+    const authHeader = req.headers.authorization;
+    if (authHeader !== 'Bearer collect-rss-2024') {
+      console.log('❌ Unauthorized RSS collection attempt');
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Unauthorized' 
+      });
+    }
+
+    // Import and run RSS collection
+    const { RSSCollectionManager } = await import('./scripts/collect-rss');
+    const manager = new RSSCollectionManager();
+    
+    // Ensure RSS tables exist first
+    await ensureRSSTables();
+    
+    // Run the collection
+    await manager.runDailyCollection();
+    
+    console.log('✅ RSS collection completed successfully');
+    
+    res.json({ 
+      success: true, 
+      message: 'RSS collection completed successfully!'
+    });
+    
+  } catch (error: any) {
+    console.error('RSS collection failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ 
