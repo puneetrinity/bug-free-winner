@@ -161,6 +161,11 @@ function parseRSSItem(item: any, source: RSSSource): RawContentItem | null {
       imageUrl = item['media:thumbnail']['@'].url;
     }
     
+    // Try media:content (ET HR World format)
+    if (!imageUrl && item['media:content'] && item['media:content']['@']) {
+      imageUrl = item['media:content']['@'].url;
+    }
+    
     // Try item image field
     if (!imageUrl && item.image && item.image.url) {
       imageUrl = item.image.url;
