@@ -575,6 +575,14 @@ CREATE TABLE IF NOT EXISTS rss_collection_stats (
       }
     }
     
+    // Add image_url column if it doesn't exist (for existing tables)
+    try {
+      await db.query('ALTER TABLE rss_articles ADD COLUMN IF NOT EXISTS image_url TEXT;');
+      console.log('✅ Added image_url column to existing table');
+    } catch (error) {
+      console.log('ℹ️ image_url column may already exist');
+    }
+    
     console.log('✅ RSS tables created successfully');
   } catch (error) {
     console.error('❌ Failed to create RSS tables:', error);
