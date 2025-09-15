@@ -129,14 +129,6 @@ export class RSSCollector {
 
 function parseRSSItem(item: any, source: RSSSource): RawContentItem | null {
   try {
-    // Debug: Log item structure to understand RSS parsing
-    if (source.name.includes('ET HR World')) {
-      console.log(`🔍 Debug RSS item for ${source.name}:`);
-      console.log('Available properties:', Object.keys(item));
-      console.log('media:content:', item['media:content']);
-      console.log('Item object structure:', JSON.stringify(item, null, 2).substring(0, 500));
-    }
-    
     // Extract and clean description
     let description = item.description || item.summary || '';
     description = description.replace(/<[^>]*>/g, ''); // Remove HTML tags
@@ -164,14 +156,44 @@ function parseRSSItem(item: any, source: RSSSource): RawContentItem | null {
       }
     }
     
-    // Try media fields
-    if (!imageUrl && item['media:thumbnail'] && item['media:thumbnail']['@']) {
-      imageUrl = item['media:thumbnail']['@'].url;
+    // Try media fields - feedparser handles namespaced attributes differently
+    if (!imageUrl && item['media:thumbnail']) {
+      if (typeof item['media:thumbnail'] === 'string') {
+        imageUrl = item['media:thumbnail'];
+      } else if (item['media:thumbnail'].url) {
+        imageUrl = item['media:thumbnail'].url;
+      } else if (item['media:thumbnail']['@'] && item['media:thumbnail']['@'].url) {
+        imageUrl = item['media:thumbnail']['@'].url;
+      }
     }
     
-    // Try media:content (ET HR World format)
-    if (!imageUrl && item['media:content'] && item['media:content']['@']) {
-      imageUrl = item['media:content']['@'].url;
+    // Try media:content (ET HR World format) - feedparser may flatten attributes
+    if (!imageUrl && item['media:content']) {
+      if (typeof item['media:content'] === 'string') {
+        imageUrl = item['media:content'];
+      } else if (item['media:content'].url) {
+        imageUrl = item['media:content'].url;
+      } else if (item['media:content']['@'] && item['media:content']['@'].url) {
+        imageUrl = item['media:content']['@'].url;
+      } else if (Array.isArray(item['media:content']) && item['media:content'][0]) {
+        const mediaContent = item['media:content'][0];
+        if (mediaContent.url) {
+          imageUrl = mediaContent.url;
+        } else if (mediaContent['@'] && mediaContent['@'].url) {
+          imageUrl = mediaContent['@'].url;
+        }
+      }
+    }
+    
+    // Alternative: try direct property access patterns that feedparser might use
+    if (!imageUrl) {
+      const possibleKeys = ['media$content', 'media_content', 'mediacontent'];
+      for (const key of possibleKeys) {
+        if (item[key] && item[key].url) {
+          imageUrl = item[key].url;
+          break;
+        }
+      }
     }
     
     // Try item image field
