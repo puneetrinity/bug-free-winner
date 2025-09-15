@@ -452,6 +452,96 @@ app.get('/api/reports/:id/pdf', async (req, res) => {
   }
 });
 
+// RSS Articles endpoints
+app.get('/api/rss/articles', async (req, res) => {
+  try {
+    const category = req.query.category as string;
+    const limit = parseInt(req.query.limit as string) || 20;
+    
+    let query = `
+      SELECT * FROM rss_articles 
+      ${category ? 'WHERE feed_category = $1' : ''}
+      ORDER BY published_at DESC 
+      LIMIT ${category ? '$2' : '$1'}
+    `;
+    
+    const params = category ? [category, limit] : [limit];
+    const result = await db.query(query, params);
+    
+    res.json({
+      success: true,
+      count: result.rows.length,
+      articles: result.rows
+    });
+  } catch (error: any) {
+    console.error('RSS fetch error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/rss/categories', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        feed_category as category,
+        COUNT(*) as count,
+        MAX(published_at) as latest_article
+      FROM rss_articles
+      GROUP BY feed_category
+      ORDER BY count DESC
+    `);
+    
+    res.json({
+      success: true,
+      categories: result.rows
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/rss/search', async (req, res) => {
+  try {
+    const searchTerm = req.query.q as string;
+    const limit = parseInt(req.query.limit as string) || 20;
+    
+    if (!searchTerm) {
+      return res.status(400).json({
+        success: false,
+        error: 'Search term required'
+      });
+    }
+    
+    const query = `
+      SELECT * FROM rss_articles 
+      WHERE to_tsvector('english', title || ' ' || COALESCE(description, '')) 
+        @@ plainto_tsquery('english', $1)
+      ORDER BY published_at DESC 
+      LIMIT $2
+    `;
+    
+    const result = await db.query(query, [searchTerm, limit]);
+    
+    res.json({
+      success: true,
+      count: result.rows.length,
+      search_term: searchTerm,
+      articles: result.rows
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Get collection statistics
 app.get('/api/stats/collection', async (req, res) => {
   try {

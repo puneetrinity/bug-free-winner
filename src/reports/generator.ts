@@ -173,7 +173,19 @@ export class ReportGenerator {
     
     let sources: ContentItem[] = [];
     
-    // Try real-time Brave + ScrapingBee search first
+    // 1. SEARCH RSS ARTICLES FIRST
+    console.log('📰 Searching RSS articles database...');
+    try {
+      const rssArticles = await this.searchRSSArticles(topic, Math.floor(maxSources / 2));
+      if (rssArticles.length > 0) {
+        console.log(`✅ Found ${rssArticles.length} relevant RSS articles`);
+        sources = sources.concat(rssArticles);
+      }
+    } catch (error) {
+      console.error('⚠️ RSS search failed:', error);
+    }
+    
+    // 2. THEN DO REAL-TIME BRAVE + SCRAPINGBEE SEARCH
     if (this.braveCollector) {
       console.log('🌐 Performing real-time Brave + ScrapingBee search...');
       
@@ -188,9 +200,10 @@ export class ReportGenerator {
         console.log(`🎯 Running ${searchQueries.length} topic-specific searches...`);
         
         // Collect fresh content from Brave + ScrapingBee
+        const remainingSlots = maxSources - sources.length;
         const rawItems = await this.braveCollector.collectHRContent(
           searchQueries, 
-          Math.ceil(maxSources / searchQueries.length)  // Distribute across queries
+          Math.ceil(remainingSlots / searchQueries.length)
         );
         
         console.log(`✅ Collected ${rawItems.length} fresh articles from Brave + ScrapingBee`);
@@ -200,17 +213,18 @@ export class ReportGenerator {
           const scoredItems = this.contentScorer.scoreMultipleItems(rawItems, 'brave_realtime');
           
           // Convert to ContentItems format (without saving to DB)
-          sources = scoredItems.map(item => ({
+          const braveContent = scoredItems.map(item => ({
             ...item,
             id: crypto.randomUUID(),
             collected_at: new Date()
           } as ContentItem));
           
-          console.log(`🎯 Scored ${sources.length} real-time sources`);
+          sources = sources.concat(braveContent);
+          console.log(`🎯 Total sources: ${sources.length} (RSS: ${sources.filter(s => s.source.includes('et_hr') || s.source.includes('google_news')).length}, Brave: ${braveContent.length})`);
         }
         
       } catch (error) {
-        console.error('⚠️ Real-time search failed, falling back to database:', error);
+        console.error('⚠️ Real-time search failed:', error);
       }
     }
     
@@ -450,6 +464,52 @@ Note: This analysis is based on ${sourceCount} recent sources from the Indian HR
       const numberMatch = match.match(/\d+/);
       return parseInt(numberMatch ? numberMatch[0] : '0');
     });
+  }
+
+  private async searchRSSArticles(topic: string, limit: number): Promise<ContentItem[]> {
+    try {
+      // Search RSS articles in database
+      const query = `
+        SELECT 
+          id::text as id,
+          feed_group as source,
+          url as source_url,
+          title,
+          url,
+          md5(url) as content_hash,
+          description as snippet,
+          description as full_content,
+          author,
+          published_at,
+          collected_at,
+          categories,
+          'en' as language,
+          0.75 as domain_authority,
+          0.8 as indian_context_score,
+          0.9 as freshness_score,
+          0.7 as extractability_score,
+          0.8 as composite_score,
+          true as has_statistics,
+          true as has_dates,
+          true as has_numbers,
+          length(description) / 5 as word_count
+        FROM rss_articles 
+        WHERE 
+          to_tsvector('english', title || ' ' || COALESCE(description, '')) 
+          @@ plainto_tsquery('english', $1)
+          OR title ILIKE '%' || $1 || '%'
+          OR description ILIKE '%' || $1 || '%'
+        ORDER BY published_at DESC 
+        LIMIT $2
+      `;
+      
+      const result = await db.query(query, [topic, limit]);
+      return result.rows as ContentItem[];
+      
+    } catch (error) {
+      console.error('Failed to search RSS articles:', error);
+      return [];
+    }
   }
 
   private extractKeywords(topic: string): string[] {
