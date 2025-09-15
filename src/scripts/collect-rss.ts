@@ -87,12 +87,29 @@ class RSSCollectionManager {
         
         // Check if article already exists
         const existing = await db.query(
-          'SELECT id FROM rss_articles WHERE content_hash = $1',
+          'SELECT id, image_url FROM rss_articles WHERE content_hash = $1',
           [contentHash]
         );
         
         if (existing.rows.length > 0) {
-          duplicateCount++;
+          // If article exists but doesn't have an image, and we found one, update it
+          const existingArticle = existing.rows[0];
+          const newImageUrl = (article as any).image_url;
+          
+          if (!existingArticle.image_url && newImageUrl) {
+            try {
+              await db.query(
+                'UPDATE rss_articles SET image_url = $1 WHERE id = $2',
+                [newImageUrl, existingArticle.id]
+              );
+              console.log(`✅ Added image to existing article: ${article.title.substring(0, 50)}...`);
+              newCount++; // Count as updated
+            } catch (updateError) {
+              console.error(`❌ Failed to update image for article: ${article.title}`, updateError);
+            }
+          } else {
+            duplicateCount++;
+          }
           continue;
         }
         
