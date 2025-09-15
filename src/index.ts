@@ -462,9 +462,40 @@ app.get('/api/reports/:id/pdf', async (req, res) => {
   }
 });
 
+// Ensure RSS tables exist
+async function ensureRSSTables() {
+  try {
+    // Check if RSS tables exist
+    await db.query('SELECT 1 FROM rss_articles LIMIT 1');
+  } catch (error: any) {
+    if (error.code === '42P01') { // relation does not exist
+      console.log('📰 Creating RSS tables...');
+      
+      // Create RSS tables
+      const fs = await import('fs');
+      const path = await import('path');
+      const schemaSQL = fs.readFileSync(
+        path.join(__dirname, 'db', 'rss-schema.sql'), 
+        'utf-8'
+      );
+      
+      const statements = schemaSQL.split(';').filter(s => s.trim());
+      for (const statement of statements) {
+        if (statement.trim()) {
+          await db.query(statement);
+        }
+      }
+      
+      console.log('✅ RSS tables created successfully');
+    }
+  }
+}
+
 // RSS Articles endpoints
 app.get('/api/rss/articles', async (req, res) => {
   try {
+    await ensureRSSTables(); // Auto-create tables if needed
+    
     const category = req.query.category as string;
     const limit = parseInt(req.query.limit as string) || 20;
     
@@ -494,6 +525,8 @@ app.get('/api/rss/articles', async (req, res) => {
 
 app.get('/api/rss/categories', async (req, res) => {
   try {
+    await ensureRSSTables(); // Auto-create tables if needed
+    
     const result = await db.query(`
       SELECT 
         feed_category as category,
@@ -518,6 +551,8 @@ app.get('/api/rss/categories', async (req, res) => {
 
 app.get('/api/rss/search', async (req, res) => {
   try {
+    await ensureRSSTables(); // Auto-create tables if needed
+    
     const searchTerm = req.query.q as string;
     const limit = parseInt(req.query.limit as string) || 20;
     

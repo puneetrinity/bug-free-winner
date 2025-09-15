@@ -468,6 +468,16 @@ Note: This analysis is based on ${sourceCount} recent sources from the Indian HR
 
   private async searchRSSArticles(topic: string, limit: number): Promise<ContentItem[]> {
     try {
+      // Auto-create RSS tables if they don't exist
+      try {
+        await db.query('SELECT 1 FROM rss_articles LIMIT 1');
+      } catch (error: any) {
+        if (error.code === '42P01') {
+          console.log('📰 RSS tables not found, skipping RSS search');
+          return [];
+        }
+      }
+      
       // Search RSS articles in database
       const query = `
         SELECT 
