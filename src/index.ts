@@ -90,6 +90,14 @@ app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
+// HR News Hub UI route (React App)
+app.get('/hr-news-hub', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'hr-news-hub', 'index.html'));
+});
+
+// Serve static assets for HR News Hub
+app.use('/hr-news-hub', express.static(path.join(__dirname, 'public', 'hr-news-hub')));
+
 // RSS News Hub route
 app.get('/rss-news', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'rss-news.html'));
