@@ -1057,6 +1057,72 @@ app.post('/api/admin/migrate-rss', async (req, res) => {
   }
 });
 
+// Image column migration endpoint - fixes missing image_url column
+app.post('/api/admin/fix-image-column', async (req, res) => {
+  try {
+    console.log('🖼️ Image column fix endpoint called');
+    
+    // Simple auth check
+    const authHeader = req.headers.authorization;
+    if (authHeader !== 'Bearer migrate-db-2024') {
+      console.log('❌ Unauthorized image column fix attempt');
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Unauthorized' 
+      });
+    }
+
+    console.log('✅ Authorization successful');
+    console.log('🔧 Checking and fixing image_url column...');
+    
+    // Check if column exists and add if missing
+    const checkColumnSQL = `
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'rss_articles' 
+      AND column_name = 'image_url'
+    `;
+    
+    const columnCheck = await db.query(checkColumnSQL);
+    
+    if (columnCheck.rows.length === 0) {
+      console.log('🔨 Adding image_url column to rss_articles table...');
+      
+      // Add the column
+      await db.query('ALTER TABLE rss_articles ADD COLUMN image_url TEXT');
+      
+      // Add index for performance
+      await db.query(`
+        CREATE INDEX IF NOT EXISTS idx_rss_articles_with_images 
+        ON rss_articles(image_url) 
+        WHERE image_url IS NOT NULL
+      `);
+      
+      console.log('✅ image_url column added successfully!');
+      
+      res.json({ 
+        success: true, 
+        message: 'image_url column added to rss_articles table successfully!',
+        action: 'column_added'
+      });
+    } else {
+      console.log('✅ image_url column already exists');
+      res.json({ 
+        success: true, 
+        message: 'image_url column already exists in rss_articles table',
+        action: 'column_exists'
+      });
+    }
+    
+  } catch (error: any) {
+    console.error('Image column fix failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 // RSS Collection endpoint
 app.post('/api/admin/collect-rss', async (req, res) => {
   try {
