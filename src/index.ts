@@ -90,6 +90,16 @@ app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
+// RSS News Hub route
+app.get('/rss-news', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'rss-news.html'));
+});
+
+// Alternative route for RSS news
+app.get('/news', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'rss-news.html'));
+});
+
 // Health check endpoint  
 /**
  * @openapi
