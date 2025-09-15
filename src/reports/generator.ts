@@ -1,8 +1,10 @@
 import axios from 'axios';
 import crypto from 'crypto';
 import db from '../db/connection';
-import { ContentItem, Report } from '../types';
+import { ContentItem, Report, RawContentItem } from '../types';
 import { PDFGenerator } from './pdf-generator';
+import { BraveScrapingBeeCollector } from '../collectors/brave-scrapingbee-collector';
+import { ContentScorer } from '../scoring/content-scorer';
 
 interface GroqMessage {
   role: 'system' | 'user' | 'assistant';
@@ -37,6 +39,8 @@ export class ReportGenerator {
   private groqApiKey: string;
   private groqApiUrl = 'https://api.groq.com/openai/v1/chat/completions';
   private pdfGenerator: PDFGenerator;
+  private braveCollector: BraveScrapingBeeCollector | null = null;
+  private contentScorer: ContentScorer;
 
   constructor() {
     this.groqApiKey = process.env.GROQ_API_KEY || '';
@@ -44,6 +48,18 @@ export class ReportGenerator {
       throw new Error('GROQ_API_KEY environment variable is required');
     }
     this.pdfGenerator = new PDFGenerator();
+    this.contentScorer = new ContentScorer();
+    
+    // Initialize Brave + ScrapingBee collector if keys available
+    const braveKey = process.env.BRAVE_API_KEY;
+    const scrapingBeeKey = process.env.SCRAPINGBEE_API_KEY;
+    
+    if (braveKey && scrapingBeeKey) {
+      this.braveCollector = new BraveScrapingBeeCollector(braveKey, scrapingBeeKey);
+      console.log('🔍 Real-time Brave + ScrapingBee search enabled for reports');
+    } else {
+      console.log('⚠️ Real-time search disabled - using database content only');
+    }
   }
 
   async generateReport(
@@ -155,26 +171,72 @@ export class ReportGenerator {
   ): Promise<ContentItem[]> {
     console.log(`🔍 Searching for content related to: "${topic}"`);
     
-    // First try direct search
-    let sources = await db.searchContentItems(topic, maxSources);
+    let sources: ContentItem[] = [];
     
-    // If not enough results, try broader search with keywords
-    if (sources.length < maxSources / 2) {
-      const keywords = this.extractKeywords(topic);
-      console.log(`🔍 Expanding search with keywords: ${keywords.join(', ')}`);
+    // Try real-time Brave + ScrapingBee search first
+    if (this.braveCollector) {
+      console.log('🌐 Performing real-time Brave + ScrapingBee search...');
       
-      for (const keyword of keywords) {
-        const additionalSources = await db.searchContentItems(keyword, 10);
-        sources = sources.concat(additionalSources);
+      try {
+        // Create topic-specific search queries
+        const searchQueries = [
+          topic,  // Use the exact topic
+          `${topic} India 2024 2025`,  // Add India and recent years
+          `${topic} latest trends statistics`  // Add trend keywords
+        ];
+        
+        console.log(`🎯 Running ${searchQueries.length} topic-specific searches...`);
+        
+        // Collect fresh content from Brave + ScrapingBee
+        const rawItems = await this.braveCollector.collectHRContent(
+          searchQueries, 
+          Math.ceil(maxSources / searchQueries.length)  // Distribute across queries
+        );
+        
+        console.log(`✅ Collected ${rawItems.length} fresh articles from Brave + ScrapingBee`);
+        
+        // Score and convert to ContentItems
+        if (rawItems.length > 0) {
+          const scoredItems = this.contentScorer.scoreMultipleItems(rawItems, 'brave_realtime');
+          
+          // Convert to ContentItems format (without saving to DB)
+          sources = scoredItems.map(item => ({
+            ...item,
+            id: crypto.randomUUID(),
+            collected_at: new Date()
+          } as ContentItem));
+          
+          console.log(`🎯 Scored ${sources.length} real-time sources`);
+        }
+        
+      } catch (error) {
+        console.error('⚠️ Real-time search failed, falling back to database:', error);
       }
+    }
+    
+    // If no real-time results or collector not available, fall back to database
+    if (sources.length === 0) {
+      console.log('📚 Using database content (no real-time search available)');
+      sources = await db.searchContentItems(topic, maxSources);
       
-      // Remove duplicates and sort by relevance
-      sources = sources
-        .filter((source, index, self) => 
-          index === self.findIndex(s => s.id === source.id)
-        )
-        .sort((a, b) => Number(b.composite_score) - Number(a.composite_score))
-        .slice(0, maxSources);
+      // If not enough results, try broader search with keywords
+      if (sources.length < maxSources / 2) {
+        const keywords = this.extractKeywords(topic);
+        console.log(`🔍 Expanding search with keywords: ${keywords.join(', ')}`);
+        
+        for (const keyword of keywords) {
+          const additionalSources = await db.searchContentItems(keyword, 10);
+          sources = sources.concat(additionalSources);
+        }
+        
+        // Remove duplicates and sort by relevance
+        sources = sources
+          .filter((source, index, self) => 
+            index === self.findIndex(s => s.id === source.id)
+          )
+          .sort((a, b) => Number(b.composite_score) - Number(a.composite_score))
+          .slice(0, maxSources);
+      }
     }
 
     // Filter by time range
@@ -185,8 +247,7 @@ export class ReportGenerator {
       new Date(source.published_at || source.collected_at) > cutoffDate
     );
     
-    // Use all sources from Brave Search + ScrapingBee without content filtering
-    console.log(`🔍 Using all ${sources.length} sources from search without filtering`);
+    console.log(`🔍 Using ${sources.length} sources for report generation`);
 
     // Prioritize high-quality sources
     sources = sources
