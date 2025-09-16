@@ -1259,6 +1259,78 @@ app.use((req, res) => {
   });
 });
 
+// Automatic RSS Collection Scheduler
+function startRSSScheduler() {
+  console.log('⏰ Starting automatic RSS collection scheduler...');
+  
+  // Function to run RSS collection
+  const runRSSCollection = async () => {
+    try {
+      console.log('🤖 [Scheduler] Starting automatic RSS collection...');
+      
+      // Import RSS collection manager
+      const { RSSCollectionManager } = await import('./scripts/collect-rss');
+      const manager = new RSSCollectionManager();
+      
+      // Run the collection
+      const result = await manager.runDailyCollection();
+      console.log('✅ [Scheduler] Automatic RSS collection completed successfully');
+      console.log(`📊 [Scheduler] Collected: ${result.totalArticles}, New: ${result.newArticles}, Duplicates: ${result.duplicates}`);
+      
+    } catch (error) {
+      console.error('❌ [Scheduler] Automatic RSS collection failed:', error);
+    }
+  };
+  
+  // Calculate time until next 6 AM UTC
+  const scheduleNextCollection = () => {
+    const now = new Date();
+    const next6AM = new Date();
+    next6AM.setUTCHours(6, 0, 0, 0); // 6 AM UTC
+    
+    // If it's already past 6 AM today, schedule for tomorrow
+    if (now >= next6AM) {
+      next6AM.setUTCDate(next6AM.getUTCDate() + 1);
+    }
+    
+    const msUntil6AM = next6AM.getTime() - now.getTime();
+    console.log(`⏰ [Scheduler] Next RSS collection scheduled for: ${next6AM.toISOString()} (in ${Math.round(msUntil6AM / 1000 / 60 / 60)} hours)`);
+    
+    // Schedule the next collection
+    setTimeout(async () => {
+      await runRSSCollection();
+      // Schedule the next one (every 24 hours)
+      setInterval(runRSSCollection, 24 * 60 * 60 * 1000);
+    }, msUntil6AM);
+  };
+  
+  // Run initial collection if it's been more than 12 hours since last collection
+  const checkAndRunInitialCollection = async () => {
+    try {
+      // Check when last collection happened
+      const result = await db.query(`
+        SELECT MAX(collected_at) as last_collection 
+        FROM rss_articles 
+        WHERE collected_at > NOW() - INTERVAL '12 hours'
+      `);
+      
+      if (result.rows.length === 0 || !result.rows[0].last_collection) {
+        console.log('🚀 [Scheduler] No recent RSS collection found, running initial collection...');
+        await runRSSCollection();
+      } else {
+        console.log('✅ [Scheduler] Recent RSS collection found, skipping initial collection');
+      }
+    } catch (error) {
+      console.log('⚠️ [Scheduler] Could not check last collection time, running initial collection...');
+      await runRSSCollection();
+    }
+  };
+  
+  // Start the scheduler
+  checkAndRunInitialCollection();
+  scheduleNextCollection();
+}
+
 // Start server
 app.listen(port, () => {
   console.log(`🚀 HR Research Platform API running on port ${port}`);
@@ -1285,6 +1357,9 @@ app.listen(port, () => {
   console.log(`   curl http://localhost:${port}/health`);
   console.log(`   curl http://localhost:${port}/api/content?limit=5&min_score=0.7`);
   console.log(`   curl -X POST http://localhost:${port}/api/reports/generate -H "Content-Type: application/json" -d '{"topic":"attrition trends in India","max_sources":10}'`);
+  
+  // Start automatic RSS collection scheduler
+  startRSSScheduler();
 });
 
 // Graceful shutdown

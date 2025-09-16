@@ -15,7 +15,7 @@ class RSSCollectionManager {
     this.scorer = new ContentScorer();
   }
 
-  async runDailyCollection(): Promise<void> {
+  async runDailyCollection(): Promise<{ totalArticles: number, newArticles: number, duplicates: number }> {
     console.log('🌅 Starting daily RSS collection...');
     console.log(`📅 Date: ${new Date().toISOString()}`);
     console.log('='.repeat(60));
@@ -47,6 +47,12 @@ class RSSCollectionManager {
       console.log(`✅ Daily collection completed in ${duration}ms`);
       console.log(`📊 Summary: ${articles.length} collected, ${storageStats.new} new, ${storageStats.duplicates} duplicates`);
       
+      return {
+        totalArticles: articles.length,
+        newArticles: storageStats.new,
+        duplicates: storageStats.duplicates
+      };
+      
     } catch (error) {
       console.error('❌ Daily collection failed:', error);
       
@@ -60,6 +66,13 @@ class RSSCollectionManager {
         collection_time_ms: Date.now() - startTime,
         errors: error instanceof Error ? error.message : String(error)
       });
+      
+      // Return empty stats in case of error
+      return {
+        totalArticles: 0,
+        newArticles: 0,
+        duplicates: 0
+      };
     }
   }
 
