@@ -149,7 +149,7 @@ function parseRSSItem(item: any, source: RSSSource): RawContentItem | null {
     }
     
     // Try description images
-    if (!imageUrl && item.description) {
+    if (!imageUrl && item.description && typeof item.description === 'string') {
       const imgMatch = item.description.match(/<img[^>]+src=["']([^"']+)["']/i);
       if (imgMatch) {
         imageUrl = imgMatch[1];
@@ -202,7 +202,7 @@ function parseRSSItem(item: any, source: RSSSource): RawContentItem | null {
     }
     
     // Try content:encoded
-    if (!imageUrl && item['content:encoded']) {
+    if (!imageUrl && item['content:encoded'] && typeof item['content:encoded'] === 'string') {
       const imgMatch = item['content:encoded'].match(/<img[^>]+src=["']([^"']+)["']/i);
       if (imgMatch) {
         imageUrl = imgMatch[1];
