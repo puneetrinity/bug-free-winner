@@ -49,12 +49,8 @@ app.get('/', (req, res) => {
   const acceptsHtml = req.headers.accept && req.headers.accept.includes('text/html');
   
   if (acceptsHtml) {
-    // If accessing from news.evalmatch.app, serve the RSS feed hub directly
-    if (isNewsEvalMatch) {
-      res.sendFile(path.join(__dirname, 'public', 'hr-news-hub', 'index.html'));
-    } else {
-      res.redirect('/dashboard');
-    }
+    // Always serve HR News Hub as the landing page
+    res.sendFile(path.join(__dirname, 'public', 'hr-news-hub', 'index.html'));
   } else {
     res.json({
       service: 'HR Research Platform API',
@@ -62,6 +58,7 @@ app.get('/', (req, res) => {
       status: 'online',
       timestamp: new Date().toISOString(),
       links: {
+        home: '/',
         dashboard: '/dashboard',
         api_docs: '/api-docs',
         health: '/health'
