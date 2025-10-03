@@ -4,7 +4,7 @@
 export interface RSSSource {
   name: string;
   url: string;
-  category: 'general' | 'technology' | 'recruitment' | 'analytics' | 'leadership' | 'diversity' | 'wellbeing' | 'jobs' | 'business';
+  category: 'general' | 'technology' | 'recruitment' | 'analytics' | 'diversity' | 'wellbeing' | 'business';
   source_group: 'et_hr' | 'indian_express' | 'toi' | 'google_news' | 'global_hr' | 'government' | 'indian_hr_blogs';
   priority: 1 | 2 | 3;
   update_frequency: 'hourly' | 'daily' | 'weekly';
@@ -39,7 +39,7 @@ export const RSS_SOURCES: RSSSource[] = [
   {
     name: 'ET HR World - Leadership',
     url: 'https://hr.economictimes.indiatimes.com/rss/trends/leadership',
-    category: 'leadership',
+    category: 'general',
     source_group: 'et_hr',
     priority: 1,
     update_frequency: 'daily'
@@ -81,7 +81,7 @@ export const RSS_SOURCES: RSSSource[] = [
   {
     name: 'Indian Express - Jobs',
     url: 'https://indianexpress.com/section/jobs/feed/',
-    category: 'jobs',
+    category: 'general',
     source_group: 'indian_express',
     priority: 1,
     update_frequency: 'daily'
@@ -89,7 +89,7 @@ export const RSS_SOURCES: RSSSource[] = [
   {
     name: 'Indian Express - Bank Jobs',
     url: 'https://indianexpress.com/section/jobs/bank-jobs/feed/',
-    category: 'jobs',
+    category: 'general',
     source_group: 'indian_express',
     priority: 2,
     update_frequency: 'daily'
