@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/hr-news-hub/static/css/main.e3be0c59.css",
+    "main.js": "/hr-news-hub/static/js/main.67c67bcb.js",
+    "index.html": "/hr-news-hub/index.html",
+    "main.e3be0c59.css.map": "/hr-news-hub/static/css/main.e3be0c59.css.map",
+    "main.67c67bcb.js.map": "/hr-news-hub/static/js/main.67c67bcb.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.e3be0c59.css",
+    "static/js/main.67c67bcb.js"
+  ]
+}
