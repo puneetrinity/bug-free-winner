@@ -39,13 +39,22 @@ const GenerateReportSchema = z.object({
 // Initialize report generator
 const reportGenerator = new ReportGenerator();
 
-// Root endpoint - redirect to dashboard
+// Root endpoint - redirect based on domain
 app.get('/', (req, res) => {
+  // Check if the request is coming from the custom domain
+  const host = req.headers.host || '';
+  const isNewsEvalMatch = host.includes('news.evalmatch.app');
+  
   // Check if request accepts HTML (browser) or JSON (API client)
   const acceptsHtml = req.headers.accept && req.headers.accept.includes('text/html');
   
   if (acceptsHtml) {
-    res.redirect('/dashboard');
+    // If accessing from news.evalmatch.app, serve the RSS feed hub directly
+    if (isNewsEvalMatch) {
+      res.sendFile(path.join(__dirname, 'public', 'hr-news-hub', 'index.html'));
+    } else {
+      res.redirect('/dashboard');
+    }
   } else {
     res.json({
       service: 'HR Research Platform API',
@@ -97,6 +106,16 @@ app.get('/hr-news-hub', (req, res) => {
 
 // Serve static assets for HR News Hub
 app.use('/hr-news-hub', express.static(path.join(__dirname, 'public', 'hr-news-hub')));
+
+// Also serve static assets from root for news.evalmatch.app domain
+app.use((req, res, next) => {
+  const host = req.headers.host || '';
+  if (host.includes('news.evalmatch.app') && req.path.startsWith('/static')) {
+    express.static(path.join(__dirname, 'public', 'hr-news-hub'))(req, res, next);
+  } else {
+    next();
+  }
+});
 
 // RSS News Hub route
 app.get('/rss-news', (req, res) => {
