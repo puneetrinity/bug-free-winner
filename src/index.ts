@@ -98,17 +98,17 @@ app.get('/dashboard', (req, res) => {
 
 // HR News Hub UI route (React App)
 app.get('/hr-news-hub', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'hr-news-hub', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Serve static assets for HR News Hub
-app.use('/hr-news-hub', express.static(path.join(__dirname, 'public', 'hr-news-hub')));
+app.use('/hr-news-hub', express.static(path.join(__dirname, 'public')));
 
 // Also serve static assets from root for news.evalmatch.app domain
 app.use((req, res, next) => {
   const host = req.headers.host || '';
   if (host.includes('news.evalmatch.app') && req.path.startsWith('/static')) {
-    express.static(path.join(__dirname, 'public', 'hr-news-hub'))(req, res, next);
+    express.static(path.join(__dirname, 'public'))(req, res, next);
   } else {
     next();
   }
