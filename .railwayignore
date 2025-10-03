@@ -1,0 +1,7 @@
+hr-news-frontend/
+node_modules/
+.git/
+*.log
+dist/node_modules/
+test-*.js
+reports/pdf/
