@@ -616,21 +616,40 @@ app.get('/api/rss/articles', async (req, res) => {
     
     const category = req.query.category as string;
     const limit = parseInt(req.query.limit as string) || 20;
+    const offset = parseInt(req.query.offset as string) || 0;
     
+    // Get total count for pagination
+    let countQuery = `
+      SELECT COUNT(*) as total FROM rss_articles 
+      ${category ? 'WHERE feed_category = $1' : ''}
+    `;
+    const countParams = category ? [category] : [];
+    const countResult = await db.query(countQuery, countParams);
+    const totalCount = parseInt(countResult.rows[0].total);
+    
+    // Get paginated articles
     let query = `
       SELECT * FROM rss_articles 
       ${category ? 'WHERE feed_category = $1' : ''}
       ORDER BY published_at DESC 
-      LIMIT ${category ? '$2' : '$1'}
+      LIMIT ${category ? '$2' : '$1'} 
+      OFFSET ${category ? '$3' : '$2'}
     `;
     
-    const params = category ? [category, limit] : [limit];
+    const params = category ? [category, limit, offset] : [limit, offset];
     const result = await db.query(query, params);
     
     res.json({
       success: true,
       count: result.rows.length,
-      articles: result.rows
+      total: totalCount,
+      articles: result.rows,
+      pagination: {
+        currentPage: Math.floor(offset / limit) + 1,
+        totalPages: Math.ceil(totalCount / limit),
+        hasNext: (offset + limit) < totalCount,
+        hasPrev: offset > 0
+      }
     });
   } catch (error: any) {
     console.error('RSS fetch error:', error);
@@ -673,6 +692,7 @@ app.get('/api/rss/search', async (req, res) => {
     
     const searchTerm = req.query.q as string;
     const limit = parseInt(req.query.limit as string) || 20;
+    const offset = parseInt(req.query.offset as string) || 0;
     
     if (!searchTerm) {
       return res.status(400).json({
@@ -681,21 +701,38 @@ app.get('/api/rss/search', async (req, res) => {
       });
     }
     
+    // Get total count for search results
+    const countQuery = `
+      SELECT COUNT(*) as total FROM rss_articles 
+      WHERE to_tsvector('english', title || ' ' || COALESCE(description, '')) 
+        @@ plainto_tsquery('english', $1)
+    `;
+    const countResult = await db.query(countQuery, [searchTerm]);
+    const totalCount = parseInt(countResult.rows[0].total);
+    
+    // Get paginated search results
     const query = `
       SELECT * FROM rss_articles 
       WHERE to_tsvector('english', title || ' ' || COALESCE(description, '')) 
         @@ plainto_tsquery('english', $1)
       ORDER BY published_at DESC 
-      LIMIT $2
+      LIMIT $2 OFFSET $3
     `;
     
-    const result = await db.query(query, [searchTerm, limit]);
+    const result = await db.query(query, [searchTerm, limit, offset]);
     
     res.json({
       success: true,
       count: result.rows.length,
+      total: totalCount,
       search_term: searchTerm,
-      articles: result.rows
+      articles: result.rows,
+      pagination: {
+        currentPage: Math.floor(offset / limit) + 1,
+        totalPages: Math.ceil(totalCount / limit),
+        hasNext: (offset + limit) < totalCount,
+        hasPrev: offset > 0
+      }
     });
   } catch (error: any) {
     res.status(500).json({
