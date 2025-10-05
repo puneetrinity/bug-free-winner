@@ -91,9 +91,9 @@ app.get('/', (req, res) => {
   }
 });
 
-// Dashboard UI route
+// Dashboard UI route - serve React app for chat interface
 app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+  res.sendFile(path.join(__dirname, 'public', 'hr-news-hub', 'index.html'));
 });
 
 // HR News Hub UI route (React App)
@@ -805,12 +805,197 @@ app.get('/api/stats/collection', async (req, res) => {
   }
 });
 
+// ==========================================
+// CHAT API ENDPOINTS
+// ==========================================
+
+import { ChatController } from './chat/chat-controller';
+
+// Create new chat session
+app.post('/api/chat/sessions', async (req, res) => {
+  try {
+    const session = await db.insertChatSession({
+      title: req.body.title || 'New Research'
+    });
+    res.json(session);
+  } catch (error: any) {
+    console.error('Failed to create session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all chat sessions
+app.get('/api/chat/sessions', async (req, res) => {
+  try {
+    const sessions = await db.getChatSessions(50);
+    res.json(sessions);
+  } catch (error: any) {
+    console.error('Failed to fetch sessions:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get specific session with messages
+app.get('/api/chat/sessions/:id', async (req, res) => {
+  try {
+    const session = await db.getChatSession(req.params.id);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    const messages = await db.getChatMessages(req.params.id);
+    res.json({ ...session, messages });
+  } catch (error: any) {
+    console.error('Failed to fetch session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete chat session
+app.delete('/api/chat/sessions/:id', async (req, res) => {
+  try {
+    await db.deleteChatSession(req.params.id);
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Failed to delete session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get messages for a session
+app.get('/api/chat/sessions/:id/messages', async (req, res) => {
+  try {
+    const messages = await db.getChatMessages(req.params.id);
+    res.json(messages);
+  } catch (error: any) {
+    console.error('Failed to fetch messages:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// SSE streaming chat endpoint
+app.post('/api/chat/message', async (req, res) => {
+  const { session_id, message } = req.body;
+
+  if (!session_id || !message) {
+    return res.status(400).json({ error: 'session_id and message required' });
+  }
+
+  console.log(`💬 Chat message request: session=${session_id}, message="${message.substring(0, 50)}..."`);
+
+  // Set SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx buffering
+
+  // Keep connection alive
+  const keepAliveInterval = setInterval(() => {
+    res.write(': keepalive\n\n');
+  }, 15000);
+
+  try {
+    const chatController = new ChatController();
+
+    for await (const event of chatController.handleMessage(session_id, message)) {
+      const data = JSON.stringify(event);
+      res.write(`data: ${data}\n\n`);
+
+      // Flush immediately if available (cast to any for flush method)
+      const resWithFlush = res as any;
+      if (resWithFlush.flush) resWithFlush.flush();
+    }
+
+    res.write('data: [DONE]\n\n');
+    clearInterval(keepAliveInterval);
+    res.end();
+  } catch (error: any) {
+    console.error('Chat streaming error:', error);
+    res.write(`data: ${JSON.stringify({
+      type: 'error',
+      message: error.message || 'An error occurred'
+    })}\n\n`);
+    clearInterval(keepAliveInterval);
+    res.end();
+  }
+});
+
+// List all reports (for chat report references)
+app.get('/api/reports', async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT id, topic, title, source_count, citation_count, confidence_score, word_count, pdf_path, created_at FROM reports ORDER BY created_at DESC LIMIT 100'
+    );
+    res.json(result.rows);
+  } catch (error: any) {
+    console.error('Failed to fetch reports:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete report
+app.delete('/api/reports/:id', async (req, res) => {
+  try {
+    await db.query('DELETE FROM reports WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Failed to delete report:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Chat schema migration endpoint
+app.post('/api/admin/migrate-chat', async (req, res) => {
+  try {
+    console.log('📨 Chat migration endpoint called');
+
+    // Simple auth check
+    const authHeader = req.headers.authorization;
+    if (authHeader !== 'Bearer migrate-db-2024') {
+      console.log('❌ Unauthorized chat migration attempt');
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized'
+      });
+    }
+
+    console.log('✅ Authorization successful');
+    console.log('🗄️ Starting chat schema migration...');
+
+    // Read chat schema file
+    const fs = await import('fs');
+    const path = await import('path');
+
+    const chatSchemaPath = path.join(__dirname, 'db', 'chat-schema.sql');
+    const chatSchema = fs.readFileSync(chatSchemaPath, 'utf-8');
+
+    // Execute the schema (it's designed to run as one script with proper error handling)
+    await db.query(chatSchema);
+
+    console.log('✅ Chat schema migration completed successfully!');
+
+    res.json({
+      success: true,
+      message: 'Chat schema migration completed successfully!'
+    });
+  } catch (error: any) {
+    console.error('Chat migration failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ==========================================
+// END CHAT API ENDPOINTS
+// ==========================================
+
 // Error handling middleware
 app.use((error: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Unhandled error:', error);
-  res.status(500).json({ 
-    success: false, 
-    error: 'Internal server error' 
+  res.status(500).json({
+    success: false,
+    error: 'Internal server error'
   });
 });
 

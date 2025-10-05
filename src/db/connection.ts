@@ -295,13 +295,72 @@ class Database {
 
   async getCollectionStats(days = 7): Promise<CollectionStats[]> {
     const query = `
-      SELECT * FROM collection_stats 
+      SELECT * FROM collection_stats
       WHERE date >= CURRENT_DATE - INTERVAL '${days} days'
       ORDER BY date DESC, source
     `;
-    
+
     const result = await this.query(query);
     return result.rows;
+  }
+
+  // Chat Sessions
+  async insertChatSession(data: { title?: string; user_id?: string }): Promise<any> {
+    const result = await this.query(
+      'INSERT INTO chat_sessions (title, user_id) VALUES ($1, $2) RETURNING *',
+      [data.title || 'New Research', data.user_id || null]
+    );
+    return result.rows[0];
+  }
+
+  async getChatSessions(limit = 20): Promise<any[]> {
+    const result = await this.query(
+      'SELECT * FROM chat_sessions ORDER BY updated_at DESC LIMIT $1',
+      [limit]
+    );
+    return result.rows;
+  }
+
+  async getChatSession(id: string): Promise<any | null> {
+    const result = await this.query(
+      'SELECT * FROM chat_sessions WHERE id = $1',
+      [id]
+    );
+    return result.rows[0] || null;
+  }
+
+  async deleteChatSession(id: string): Promise<void> {
+    await this.query('DELETE FROM chat_sessions WHERE id = $1', [id]);
+  }
+
+  // Chat Messages
+  async insertChatMessage(data: {
+    session_id: string;
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+    report_id?: string;
+    metadata?: Record<string, any>;
+  }): Promise<any> {
+    const result = await this.query(
+      'INSERT INTO chat_messages (session_id, role, content, report_id, metadata) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [data.session_id, data.role, data.content, data.report_id || null, JSON.stringify(data.metadata || {})]
+    );
+    return result.rows[0];
+  }
+
+  async getChatMessages(sessionId: string): Promise<any[]> {
+    const result = await this.query(
+      'SELECT * FROM chat_messages WHERE session_id = $1 ORDER BY created_at ASC',
+      [sessionId]
+    );
+    return result.rows;
+  }
+
+  async updateChatSessionTitle(sessionId: string, title: string): Promise<void> {
+    await this.query(
+      'UPDATE chat_sessions SET title = $1 WHERE id = $2',
+      [title, sessionId]
+    );
   }
 }
 

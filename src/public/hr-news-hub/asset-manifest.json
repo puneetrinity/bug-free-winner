@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/hr-news-hub/static/css/main.e3be0c59.css",
-    "main.js": "/hr-news-hub/static/js/main.bbd70f45.js",
+    "main.js": "/hr-news-hub/static/js/main.59de5cc3.js",
     "index.html": "/hr-news-hub/index.html",
     "main.e3be0c59.css.map": "/hr-news-hub/static/css/main.e3be0c59.css.map",
-    "main.bbd70f45.js.map": "/hr-news-hub/static/js/main.bbd70f45.js.map"
+    "main.59de5cc3.js.map": "/hr-news-hub/static/js/main.59de5cc3.js.map"
   },
   "entrypoints": [
     "static/css/main.e3be0c59.css",
-    "static/js/main.bbd70f45.js"
+    "static/js/main.59de5cc3.js"
   ]
 }
