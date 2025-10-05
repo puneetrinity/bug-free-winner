@@ -897,6 +897,7 @@ app.post('/api/chat/message', async (req, res) => {
     const chatController = new ChatController();
 
     for await (const event of chatController.handleMessage(session_id, message)) {
+      console.log('📤 Sending event:', event.type, event);
       const data = JSON.stringify(event);
       res.write(`data: ${data}\n\n`);
 
