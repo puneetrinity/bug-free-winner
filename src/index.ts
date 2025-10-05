@@ -943,7 +943,7 @@ app.delete('/api/reports/:id', async (req, res) => {
   }
 });
 
-// Chat schema migration endpoint
+// Chat schema migration endpoint - creates chat_sessions and chat_messages tables
 app.post('/api/admin/migrate-chat', async (req, res) => {
   try {
     console.log('📨 Chat migration endpoint called');
