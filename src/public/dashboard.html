@@ -415,9 +415,19 @@
                 },
 
                 async loadRecentReports() {
-                    // For now, we'll show placeholder since we don't have a list reports endpoint
-                    // In a real implementation, you'd fetch from /api/reports
-                    this.recentReports = [];
+                    try {
+                        console.log('📊 Loading recent reports...');
+                        const response = await fetch('/api/reports');
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        const reports = await response.json();
+                        this.recentReports = reports;
+                        console.log(`✅ Loaded ${reports.length} reports`);
+                    } catch (error) {
+                        console.error('Failed to load reports:', error);
+                        this.recentReports = [];
+                    }
                 },
 
                 async generateReport() {

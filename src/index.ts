@@ -91,9 +91,9 @@ app.get('/', (req, res) => {
   }
 });
 
-// Dashboard UI route - serve React app for chat interface
+// Dashboard UI route - serve chat interface dashboard
 app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'hr-news-hub', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
 // HR News Hub UI route (React App)
