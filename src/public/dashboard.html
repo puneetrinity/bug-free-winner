@@ -81,7 +81,7 @@
                         </div>
                         <div class="ml-4">
                             <h3 class="text-sm font-medium text-gray-500">Sources Active</h3>
-                            <p class="text-2xl font-semibold text-gray-900">3</p>
+                            <p class="text-2xl font-semibold text-gray-900" x-text="stats.sourcesActive">-</p>
                         </div>
                     </div>
                 </div>
@@ -383,7 +383,8 @@
                 stats: {
                     totalContent: '-',
                     totalReports: '-',
-                    avgQuality: '-'
+                    avgQuality: '-',
+                    sourcesActive: '-'
                 },
                 recentReports: [],
                 isGenerating: false,
@@ -398,19 +399,52 @@
 
                 async loadStats() {
                     try {
-                        const response = await fetch('/api/stats/collection');
-                        const data = await response.json();
+                        console.log('📊 Loading dashboard stats...');
                         
-                        if (data.success) {
-                            const totalCollected = data.by_source.reduce((sum, source) => sum + source.total_processed, 0);
-                            const avgQuality = data.by_source.reduce((sum, source) => sum + source.avg_score, 0) / data.by_source.length;
-                            
-                            this.stats.totalContent = totalCollected.toLocaleString();
-                            this.stats.avgQuality = avgQuality.toFixed(3);
+                        // Load collection stats
+                        const statsResponse = await fetch('/api/stats/collection');
+                        let totalContent = 0;
+                        let avgQuality = 0;
+                        
+                        if (statsResponse.ok) {
+                            const statsData = await statsResponse.json();
+                            if (statsData.success && statsData.by_source && statsData.by_source.length > 0) {
+                                totalContent = statsData.by_source.reduce((sum, source) => sum + source.total_processed, 0);
+                                avgQuality = statsData.by_source.reduce((sum, source) => sum + source.avg_score, 0) / statsData.by_source.length;
+                            }
                         }
+                        
+                        // Load reports count
+                        const reportsResponse = await fetch('/api/reports');
+                        let totalReports = 0;
+                        
+                        if (reportsResponse.ok) {
+                            const reportsData = await reportsResponse.json();
+                            totalReports = Array.isArray(reportsData) ? reportsData.length : 0;
+                        }
+                        
+                        // Calculate sources active
+                        let sourcesActive = 0;
+                        if (statsResponse.ok) {
+                            const statsData = await statsResponse.json();
+                            if (statsData.success && statsData.by_source) {
+                                sourcesActive = statsData.by_source.length;
+                            }
+                        }
+                        
+                        // Update stats
+                        this.stats.totalContent = totalContent.toLocaleString();
+                        this.stats.totalReports = totalReports.toString();
+                        this.stats.avgQuality = avgQuality > 0 ? avgQuality.toFixed(3) : '0.000';
+                        this.stats.sourcesActive = sourcesActive.toString();
+                        
+                        console.log('✅ Stats loaded:', this.stats);
                     } catch (error) {
                         console.error('Failed to load stats:', error);
-                        this.stats = { totalContent: '0', totalReports: '0', avgQuality: '0.000' };
+                        this.stats.totalContent = '0';
+                        this.stats.totalReports = '0';
+                        this.stats.avgQuality = '0.000';
+                        this.stats.sourcesActive = '0';
                     }
                 },
 
